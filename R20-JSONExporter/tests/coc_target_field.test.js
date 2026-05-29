@@ -261,6 +261,14 @@ test('fallback coc-like text uses inputs.target', () => {
   assert.ok(!('success' in (parsed?.inputs || {})));
 });
 
+test('fallback coc-like text normalizes smart double quotes while parsing', () => {
+  const html = '“듣기” 기준치: 55 굴림: 67 판정결과: ”실패”';
+
+  const parsed = parseRoll20DicePayload({ role: 'dice', html });
+  assert.equal(parsed?.inputs?.skill, '"듣기"');
+  assert.equal(parsed?.inputs?.result, '"실패"');
+});
+
 test('parseRoll20DicePayload normalizes coc attack bonus templates to coc-attack-bonus-penalty', () => {
   const html = `
     <div class="sheet-rolltemplate-coc-attack-bonus">

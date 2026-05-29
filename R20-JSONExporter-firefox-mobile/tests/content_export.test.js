@@ -401,6 +401,26 @@ test("buildFirefoxExportPayload uses resolved avatar mappings when the DOM avata
   );
 });
 
+test("buildFirefoxExportPayload normalizes smart double quotes in parsed dice payloads", () => {
+  const doc = createDocument({
+    messages: [
+      createMessage({
+        speaker: "KP",
+        timestamp: "8:15 PM",
+        text: "“듣기” 기준치: 55 굴림: 67 판정결과: ”실패”",
+        html: '<div class="sheet-rolltemplate-text">“듣기” 기준치: 55 굴림: 67 판정결과: ”실패”</div>',
+        messageId: "msg-smart-quotes",
+      }),
+    ],
+  });
+
+  const payload = buildFirefoxExportPayload({ doc });
+  const parsed = JSON.parse(payload.jsonText);
+
+  assert.equal(parsed.lines[0].input.dice.inputs.skill, '"듣기"');
+  assert.equal(parsed.lines[0].input.dice.inputs.result, '"실패"');
+});
+
 test("buildFirefoxExportPayload mapped export keeps user replacement", () => {
   const doc = createDocument({
     messages: [

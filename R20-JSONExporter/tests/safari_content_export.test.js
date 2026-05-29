@@ -603,6 +603,13 @@ test("browser runtime export uses the shared parser bundle contract", async () =
           avatarSrc: "https://example.com/avatar.png",
           messageId: "msg-1",
         }),
+        createMessage({
+          speaker: " KP: ",
+          timestamp: "8:16 PM",
+          text: "“듣기” 기준치: 55 굴림: 67 판정결과: ”실패”",
+          html: '<div class="sheet-rolltemplate-text">“듣기” 기준치: 55 굴림: 67 판정결과: ”실패”</div>',
+          messageId: "msg-2",
+        }),
       ],
     }),
   });
@@ -612,6 +619,8 @@ test("browser runtime export uses the shared parser bundle contract", async () =
   assert.equal(parsed.lines[0].speaker, "KP");
   assert.equal(parsed.lines[0].timestamp, "오후 8:15");
   assert.equal(parsed.lines[0].safetext, "테스트 메시지");
+  assert.equal(parsed.lines[1].input.dice.inputs.skill, '"듣기"');
+  assert.equal(parsed.lines[1].input.dice.inputs.result, '"실패"');
   assert.equal(
     parsed.lines[0].input.speakerImages.avatar.url,
     "https://example.com/avatar.png"

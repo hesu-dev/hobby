@@ -43,8 +43,12 @@ function stripHtmlTags(html) {
   return String(html || "").replace(/<[^>]*>/g, " ");
 }
 
+function normalizeDoubleQuotes(raw) {
+  return String(raw || "").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\u275D\u275E\u301D\u301E\u301F\uFF02]/g, '"');
+}
+
 function normalizeText(raw) {
-  return String(raw || "").replace(/\s+/g, " ").trim();
+  return normalizeDoubleQuotes(raw).replace(/\s+/g, " ").trim();
 }
 
 function toSafeText(raw) {
@@ -228,6 +232,7 @@ function collectTdTexts(rowHtml) {
 
 module.exports = {
   stripHtmlTags,
+  normalizeDoubleQuotes,
   normalizeText,
   toSafeText,
   extractFirstInteger,
