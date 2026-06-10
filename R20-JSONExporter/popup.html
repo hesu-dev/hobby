@@ -10,54 +10,114 @@
 
 <body>
   <main class="app">
-    <header class="header">
-      <h1>Exporter Setting</h1>
-      <p>현재 한국어만 지원합니다, Roll20 채팅로그(Show on One Page)화면 에서 사용하세요.</p>
-    </header>
+    <nav class="tabs" role="tablist" aria-label="popup sections">
+      <button
+        id="readingLogTab"
+        class="tab-button active"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        aria-controls="readingLogTabPanel"
+      >
+        리딩로그
+      </button>
+      <button
+        id="sheetTab"
+        class="tab-button"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="sheetTabPanel"
+      >
+        시트
+      </button>
+      <button
+        id="macroTab"
+        class="tab-button"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="macroTabPanel"
+      >
+        매크로
+      </button>
+    </nav>
     <section class="card">
-      <label class="field">
-        <span class="label">숨길 사담의 스타일을 입력해주세요.<br />채팅 내역의 규모가 큰 파일일 경우에는 시간이 소요됩니다.</span>
-        <input id="targetColor" class="text-input" type="text" placeholder="color: #aaaaaa" />
-      </label>
-      <label class="toggle">
-        <input id="colorFilterEnabled" type="checkbox" />
-        <span class="toggle-ui" aria-hidden="true"></span>
-        <span class="toggle-text">사담 감춤</span>
-      </label>
-      <label class="toggle">
-        <input id="hiddenTextEnabled" type="checkbox" />
-        <span class="toggle-ui" aria-hidden="true"></span>
-        <span class="toggle-text">히든 메세지 감춤</span> 
-      </label>
-      <span class="label">(히든메세지 설정시, 'This message has been hidden.' 이라는 메세지들이 감춰집니다)</span>
-      <button id="downloadTest2" class="btn btn-tertiary" type="button">
-        다운로드전 이미지 링크 확인
-      </button>
-      <button id="downloadAvatarMappedJson" class="btn btn-quaternary" type="button">
-        ReadingLog 파일 다운로드
-      </button>
-      <section id="avatarEditor" class="avatar-editor hidden">
-        <div class="avatar-editor-header">
-          <strong>이미지 링크 교체</strong>
-          <small>해당 이름의 이미지 링크를 수정하면 이미지가 모두 변경됩니다 .</small>
-        </div>
-        <div id="avatarList" class="avatar-list"></div>
+      <section id="readingLogTabPanel" class="tab-panel" role="tabpanel" aria-labelledby="readingLogTab">
+        <header class="header">
+          <h1>Exporter Setting</h1>
+          <p>현재 한국어만 지원합니다, Roll20 채팅로그(Show on One Page)화면 에서 사용하세요.</p>
+        </header>
+        <label class="field">
+          <span class="label">숨길 사담의 스타일을 입력해주세요.<br />채팅 내역의 규모가 큰 파일일 경우에는 시간이 소요됩니다.</span>
+          <input id="targetColor" class="text-input" type="text" placeholder="color: #aaaaaa" />
+        </label>
+        <label class="toggle">
+          <input id="colorFilterEnabled" type="checkbox" />
+          <span class="toggle-ui" aria-hidden="true"></span>
+          <span class="toggle-text">사담 감춤</span>
+        </label>
+        <label class="toggle">
+          <input id="hiddenTextEnabled" type="checkbox" />
+          <span class="toggle-ui" aria-hidden="true"></span>
+          <span class="toggle-text">히든 메세지 감춤</span>
+        </label>
+        <span class="label">(히든메세지 설정시, 'This message has been hidden.' 이라는 메세지들이 감춰집니다)</span>
+        <button id="downloadTest2" class="btn btn-tertiary" type="button">
+          다운로드전 이미지 링크 확인
+        </button>
+        <button id="downloadAvatarMappedJson" class="btn btn-quaternary" type="button">
+          ReadingLog 파일 다운로드
+        </button>
+        <footer class="footer">
+          <small>확장프로그램을 설치한 이후로는 상시 적용되는 사항이므로, 다운로드를 마치시면 OFF로 바꾸시길 권장합니다.</small>
+        </footer>
+        <section id="avatarEditor" class="avatar-editor hidden">
+          <div class="avatar-editor-header">
+            <strong>이미지 링크 교체</strong>
+            <small>해당 이름의 이미지 링크를 수정하면 이미지가 모두 변경됩니다 .</small>
+          </div>
+          <div id="avatarList" class="avatar-list"></div>
 
-        <!-- <button id="downloadAvatarMappedHtml" class="btn btn-quaternary" type="button">
-          교체한 링크로 다운로드 (.html)
-        </button> -->
+          <!-- <button id="downloadAvatarMappedHtml" class="btn btn-quaternary" type="button">
+            교체한 링크로 다운로드 (.html)
+          </button> -->
+        </section>
       </section>
-      <div id="progressWrap" class="progress-wrap hidden" aria-live="polite">
-        <div class="progress-track">
-          <div id="progressBar" class="progress-bar"></div>
+      <section id="sheetTabPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="sheetTab">
+        <section id="cocImportPanel" class="coc-import-panel">
+          <label class="field">
+            <span class="label">CoC 공식 시트 import 붙여넣기</span>
+            <textarea
+              id="cocImportPayload"
+              class="text-input textarea-input"
+              rows="8"
+              spellcheck="false"
+              placeholder="[R20JE:COC7_IMPORT:1] JSON [/R20JE]"
+            ></textarea>
+          </label>
+          <div class="coc-import-actions">
+            <button id="fillCocImportSample" class="btn btn-secondary" type="button">
+              로즈 샘플 넣기
+            </button>
+            <button id="applyCocImport" class="btn btn-quaternary" type="button">
+              CoC 적용
+            </button>
+          </div>
+        </section>
+      </section>
+      <section id="macroTabPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="macroTab">
+      </section>
+      <div id="feedbackPanel" class="feedback-panel">
+        <div id="progressWrap" class="progress-wrap hidden" aria-live="polite">
+          <div class="progress-track">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+          <small id="progressText" class="progress-text">로딩중...</small>
         </div>
-        <small id="progressText" class="progress-text">로딩중...</small>
+        <small id="status" class="status">위 버튼을 클릭하면 로딩이 시작됩니다.</small>
       </div>
-      <small id="status" class="status">위 버튼을 클릭하면 로딩이 시작됩니다.</small>
     </section>
-    <footer class="footer">
-      <small>확장프로그램을 설치한 이후로는 상시 적용되는 사항이므로, 다운로드를 마치시면 OFF로 바꾸시길 권장합니다.</small>
-    </footer>
   </main>
   <script src="js/popup/filter_apply_feedback.js"></script>
   <script src="js/popup/config/feature_flags.js"></script>

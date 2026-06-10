@@ -7,11 +7,17 @@ const avatarEditorEl = document.getElementById("avatarEditor");
 const avatarListEl = document.getElementById("avatarList");
 const downloadAvatarMappedHtmlEl = document.getElementById("downloadAvatarMappedHtml");
 const downloadAvatarMappedJsonEl = document.getElementById("downloadAvatarMappedJson");
+const cocImportPayloadEl = document.getElementById("cocImportPayload");
+const fillCocImportSampleEl = document.getElementById("fillCocImportSample");
+const applyCocImportEl = document.getElementById("applyCocImport");
 const progressWrapEl = document.getElementById("progressWrap");
 const progressBarEl = document.getElementById("progressBar");
 const progressTextEl = document.getElementById("progressText");
 const statusEl = document.getElementById("status");
 const appEl = document.querySelector(".app");
+const feedbackPanelEl = document.getElementById("feedbackPanel");
+const popupTabButtons = document.querySelectorAll("[role=\"tab\"]");
+const popupTabPanels = document.querySelectorAll("[role=\"tabpanel\"]");
 
 // ===== External feature adapters =====
 const applyFeedback = window.Roll20CleanerFilterApplyFeedback || {};
@@ -29,6 +35,23 @@ const inputLockReasons = new Set();
 const READY_STATUS_LOADING_TEXT = "페이지 로딩 중입니다. 잠시 후 다시 시도하세요.";
 const READY_STATUS_READY_TEXT = "준비되었습니다.";
 const READY_STATUS_PROBE_INTERVAL_MS = 1200;
+const COC_IMPORT_DEFAULT_CHARACTER_NAME = "로즈";
+
+function buildCocImportSampleText(characterName = COC_IMPORT_DEFAULT_CHARACTER_NAME) {
+  const payload = {
+    character: characterName,
+    attributes: {
+      r20je_import_test: {
+        current: "extension-applied",
+        max: "",
+      },
+    },
+    abilities: {
+      "R20JE-테스트": "/em R20JE 테스트 매크로가 실행되었습니다. [[1d100]]",
+    },
+  };
+  return `[R20JE:COC7_IMPORT:1]\n${JSON.stringify(payload, null, 2)}\n[/R20JE]`;
+}
 
 // ===== UI primitives =====
 function setStatus(text) {
@@ -50,7 +73,7 @@ function hideProgress() {
 
 function applyInputLockState() {
   const disabled = inputLockReasons.size > 0;
-  const lockTargets = document.querySelectorAll("input, button");
+  const lockTargets = document.querySelectorAll("input, textarea, button:not(.tab-button)");
   lockTargets.forEach((el) => {
     el.disabled = disabled;
   });
@@ -69,6 +92,24 @@ function unlockInputs(reason) {
   if (!reason) return;
   inputLockReasons.delete(reason);
   applyInputLockState();
+}
+
+function activatePopupTab(tabButton) {
+  const panelId = tabButton?.getAttribute("aria-controls");
+  if (!panelId) return;
+
+  popupTabButtons.forEach((button) => {
+    const isActive = button === tabButton;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+
+  popupTabPanels.forEach((panel) => {
+    const isActive = panel.id === panelId;
+    panel.classList.toggle("hidden", !isActive);
+    panel.hidden = !isActive;
+  });
+  feedbackPanelEl?.classList.toggle("hidden", panelId === "macroTabPanel");
 }
 
 function normalizeUiError(error) {
@@ -132,6 +173,7 @@ function injectContentScript(tabId) {
           "js/content/export/parsers/parser_utils.js",
           "js/content/export/parsers/coc/coc_rule_parser.js",
           "js/content/export/parsers/insane/insane_rule_parser.js",
+          "js/content/import/coc7_import.js",
           "js/content/export/chat_json_export.js",
           "js/content/export/chat_role_parser.js",
           "js/content/dom/style_processor.js",
@@ -664,8 +706,66 @@ async function runReadingLogJsonDownload() {
   }
 }
 
+function formatCocImportResult(response) {
+  if (!response?.ok) {
+    const pageMessage = response?.pageResult?.message || "";
+    const domMessage = response?.domResult?.message || "";
+    const message = pageMessage || domMessage || response?.errorMessage || "적용하지 못했습니다.";
+    return `CoC 적용 실패: ${message}`;
+  }
+
+  const requestedAttributes = Number(response?.requested?.attributes) || 0;
+  const requestedAbilities = Number(response?.requested?.abilities) || 0;
+  const pageAttributes = Number(response?.applied?.pageAttributes) || 0;
+  const domAttributes = Number(response?.applied?.domAttributes) || 0;
+  const pageAbilities = Number(response?.applied?.pageAbilities) || 0;
+  const appliedAttributes = Math.max(pageAttributes, domAttributes);
+  const reopenHint = response?.sheetUi?.reopened
+    ? " 열린 시트를 자동으로 다시 열었습니다."
+    : response?.sheetUi?.needsReopen
+    ? " 열린 시트를 닫았다 다시 열면 변경사항이 보입니다."
+    : "";
+  return `${response.characterName || COC_IMPORT_DEFAULT_CHARACTER_NAME} 적용 완료: Attributes ${appliedAttributes}/${requestedAttributes}, Abilities ${pageAbilities}/${requestedAbilities}.${reopenHint}`;
+}
+
+async function runCocImportApply() {
+  try {
+    const text = String(cocImportPayloadEl?.value || "").trim();
+    if (!text) {
+      setStatus("붙여넣기 입력창에 CoC import JSON을 넣어주세요.");
+      return;
+    }
+
+    const tabId = await getValidatedActiveTabId();
+    const ready = await ensureContentScriptLoaded(tabId);
+    if (!ready) {
+      setStatus("컨텐츠 스크립트 연결에 실패했습니다. 페이지를 새로고침 해주세요.");
+      return;
+    }
+
+    lockInputs("coc-import-apply");
+    setProgress(20, "CoC import 적용 중입니다...");
+    const response = await requestWithRecovery(tabId, "APPLY_COC7_IMPORT", {
+      text,
+      defaultCharacterName: COC_IMPORT_DEFAULT_CHARACTER_NAME,
+    });
+    setProgress(100, response?.ok ? "적용 완료" : "적용 실패");
+    setStatus(formatCocImportResult(response));
+    setTimeout(() => hideProgress(), 900);
+  } catch (error) {
+    hideProgress();
+    setStatus(`CoC import 적용 실패: ${normalizeUiError(error)}`);
+  } finally {
+    unlockInputs("coc-import-apply");
+  }
+}
+
 // ===== Event wiring =====
 function bindUiEvents() {
+  popupTabButtons.forEach((button) => {
+    button.addEventListener("click", () => activatePopupTab(button));
+  });
+
   colorFilterEnabledEl.addEventListener("change", persistFilterSettingWithApplyState);
   hiddenTextEnabledEl.addEventListener("change", persistFilterSettingWithApplyState);
   targetColorEl.addEventListener("change", persistTextSetting);
@@ -678,6 +778,15 @@ function bindUiEvents() {
     downloadAvatarMappedHtmlEl.addEventListener("click", runAvatarMappedHtmlDownload);
   }
   downloadAvatarMappedJsonEl.addEventListener("click", runReadingLogJsonDownload);
+  if (fillCocImportSampleEl && cocImportPayloadEl) {
+    fillCocImportSampleEl.addEventListener("click", () => {
+      cocImportPayloadEl.value = buildCocImportSampleText();
+      setStatus("로즈 테스트용 CoC import 샘플을 입력했습니다.");
+    });
+  }
+  if (applyCocImportEl) {
+    applyCocImportEl.addEventListener("click", runCocImportApply);
+  }
 
   window.addEventListener("unload", () => {
     stopReadyStatusProbe();

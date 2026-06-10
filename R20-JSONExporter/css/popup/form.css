@@ -18,6 +18,32 @@
   font-size: 13px;
 }
 
+.textarea-input {
+  width: 100%;
+  min-height: 132px;
+  max-height: 220px;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.4;
+}
+
+.coc-import-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.coc-import-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.coc-import-actions .btn {
+  margin-top: 0;
+}
+
 .status {
   display: block;
   margin-top: 8px;

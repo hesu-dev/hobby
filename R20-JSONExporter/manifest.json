@@ -35,7 +35,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "css/base.css"
+        "css/base.css",
+        "js/content/import/coc7_page_import.js"
       ],
       "matches": [
         "https://*.roll20.net/*",
@@ -62,6 +63,7 @@
         "js/content/export/parsers/parser_utils.js",
         "js/content/export/parsers/coc/coc_rule_parser.js",
         "js/content/export/parsers/insane/insane_rule_parser.js",
+        "js/content/import/coc7_import.js",
         "js/content/export/chat_json_export.js",
         "js/content/export/chat_role_parser.js",
         "js/content/dom/style_processor.js",

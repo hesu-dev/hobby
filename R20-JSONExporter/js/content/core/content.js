@@ -22,6 +22,7 @@
   const getSharedCore = () => window.Roll20JsonCore || {};
   const getMessageContext = () => window.Roll20CleanerMessageContext || {};
   const getRoleParser = () => window.Roll20CleanerRoleParser || {};
+  const getCoc7Import = () => window.Roll20CleanerCoc7Import || {};
   const getStyle = () => window.Roll20CleanerStyle || {};
   const getDom = () => window.Roll20CleanerDom || {};
   const getData = () => window.Roll20CleanerData || {};
@@ -1227,6 +1228,29 @@
       sendResponse({ ok: true, accepted: true, requestId });
       runFullFilterApply({ requestId, reportProgress: !!requestId });
       return;
+    }
+
+    if (message?.type === "APPLY_COC7_IMPORT") {
+      const { applyCoc7ImportText } = getCoc7Import();
+      if (typeof applyCoc7ImportText !== "function") {
+        sendResponse({
+          ok: false,
+          errorMessage: "CoC import 모듈이 준비되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.",
+        });
+        return;
+      }
+
+      applyCoc7ImportText(message?.text || "", {
+        defaultCharacterName: message?.defaultCharacterName || "로즈",
+      })
+        .then((result) => sendResponse(result))
+        .catch((error) =>
+          sendResponse({
+            ok: false,
+            errorMessage: toSimpleErrorMessage(error),
+          })
+        );
+      return true;
     }
 
     const { downloadHtmlInPage, buildLoadedImageUrlMap, copyTextToClipboard, downloadTextFileInPage } = getDom();
