@@ -73,6 +73,7 @@
 
   function findCharacterByName(characterName) {
     const target = normalizeText(characterName);
+    if (!target) return null;
     for (const collection of getCharacterCollections()) {
       const found = collectionToArray(collection).find((character) => {
         const name = getModelValue(character, "name") || getModelValue(character, "displayname");
@@ -83,12 +84,44 @@
     return null;
   }
 
+  function findCharacterById(characterId) {
+    const target = String(characterId || "").trim();
+    if (!target) return null;
+    for (const collection of getCharacterCollections()) {
+      const found = collectionToArray(collection).find((character) => String(getModelId(character) || "") === target);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function getCharacterDisplayName(character, fallback = "") {
+    return String(
+      getModelValue(character, "name") ||
+        getModelValue(character, "displayname") ||
+        fallback ||
+        ""
+    ).trim();
+  }
+
+  function isCollectionLike(collection) {
+    return !!(
+      collection &&
+      (Array.isArray(collection) ||
+        Array.isArray(collection.models) ||
+        typeof collection.toArray === "function" ||
+        typeof collection.each === "function" ||
+        typeof collection.create === "function" ||
+        typeof collection.add === "function" ||
+        (collection._byId && typeof collection._byId === "object"))
+    );
+  }
+
   function getDirectCharacterCollection(character, names) {
     for (const name of names) {
       const direct = character?.[name];
-      if (direct) return direct;
+      if (isCollectionLike(direct)) return direct;
       const viaGet = character?.get?.(name);
-      if (viaGet) return viaGet;
+      if (isCollectionLike(viaGet)) return viaGet;
     }
     return null;
   }
@@ -132,6 +165,138 @@
     return (
       getDirectCharacterCollection(character, ["abilities", "ability"]) ||
       getCampaignScopedCollection(["abilities", "ability"], characterId)
+    );
+  }
+
+  function queryElements(selector) {
+    if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return [];
+    try {
+      return [...document.querySelectorAll(selector)];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function uniqueElements(elements) {
+    return [...new Set(elements.filter(Boolean))];
+  }
+
+  function nodeContains(root, node) {
+    if (!root || !node) return false;
+    if (root === node) return true;
+    if (typeof root.contains === "function") return root.contains(node);
+    return false;
+  }
+
+  function getElementAttribute(element, name) {
+    if (!element || !name) return "";
+    if (typeof element.getAttribute === "function") {
+      const value = element.getAttribute(name);
+      if (value) return String(value);
+    }
+    const datasetName = name.replace(/^data-/, "").replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    if (element.dataset && element.dataset[datasetName]) return String(element.dataset[datasetName]);
+    return "";
+  }
+
+  function getNumericZIndex(node) {
+    const raw =
+      node?.style?.zIndex ||
+      (typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+        ? window.getComputedStyle(node)?.zIndex
+        : "");
+    const value = Number.parseInt(raw, 10);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function hasSheetIdentity(node) {
+    if (!node) return false;
+    if (getCharacterIdFromNode(node)) return true;
+    return !!node.querySelector?.('[name^="attr_"], [name="attr_character_name"], [name="attr_name"]');
+  }
+
+  function getCharacterIdFromNode(node) {
+    const attributeNames = ["data-characterid", "data-itemid", "data-id", "rel"];
+    const directId = attributeNames.map((name) => getElementAttribute(node, name)).find(Boolean);
+    if (directId) return directId;
+
+    const child = node?.querySelector?.("[data-characterid], [data-itemid], [data-id], [rel]");
+    return attributeNames.map((name) => getElementAttribute(child, name)).find(Boolean) || "";
+  }
+
+  function getCharacterNameFromNode(node) {
+    const nameInput = node?.querySelector?.('[name="attr_character_name"], [name="attr_name"], [name="attr_character"]');
+    return normalizeText(nameInput?.value || nameInput?.textContent) ? String(nameInput.value || nameInput.textContent).trim() : "";
+  }
+
+  function getOpenCharacterDialogCandidates() {
+    const selectors = [
+      ".ui-dialog",
+      ".ui-dialog-content",
+      ".characterdialog",
+      ".charactersheet",
+      ".charsheet",
+    ];
+    return uniqueElements(selectors.flatMap((selector) => queryElements(selector))).filter(hasSheetIdentity);
+  }
+
+  function findActiveOpenCharacterDialog() {
+    const candidates = getOpenCharacterDialogCandidates();
+    if (!candidates.length) return null;
+
+    const activeElement =
+      typeof document !== "undefined" && "activeElement" in document ? document.activeElement : null;
+    const activeDialog = candidates.find((node) => nodeContains(node, activeElement));
+    if (activeDialog) return activeDialog;
+
+    if (candidates.length === 1) return candidates[0];
+
+    const sortedByStack = candidates
+      .map((node, index) => ({
+        node,
+        index,
+        zIndex: getNumericZIndex(node),
+      }))
+      .filter((item) => item.zIndex > 0)
+      .sort((a, b) => b.zIndex - a.zIndex || b.index - a.index);
+
+    return sortedByStack[0]?.node || null;
+  }
+
+  function resolveOpenSheetCharacter() {
+    const dialog = findActiveOpenCharacterDialog();
+    if (!dialog) return null;
+
+    const characterId = getCharacterIdFromNode(dialog);
+    const characterById = findCharacterById(characterId);
+    if (characterById) {
+      return {
+        character: characterById,
+        source: "open-sheet-id",
+      };
+    }
+
+    const characterName = getCharacterNameFromNode(dialog);
+    const characterByName = findCharacterByName(characterName);
+    if (characterByName) {
+      return {
+        character: characterByName,
+        source: "open-sheet-name",
+      };
+    }
+
+    return null;
+  }
+
+  function resolveTargetCharacter(payload) {
+    return (
+      resolveOpenSheetCharacter() ||
+      (payload.characterName
+        ? {
+            character: findCharacterByName(payload.characterName),
+            source: "payload-name",
+          }
+        : null)
     );
   }
 
@@ -448,18 +613,23 @@
   }
 
   async function applyImport(payload) {
-    const character = findCharacterByName(payload.characterName);
+    const target = resolveTargetCharacter(payload);
+    const character = target?.character || null;
     if (!character) {
+      const targetMessage = payload.characterName
+        ? `캐릭터 '${payload.characterName}'를 Roll20 모델에서 찾지 못했습니다.`
+        : "열린 캐릭터 시트나 같은 이름의 Roll20 캐릭터를 찾지 못했습니다.";
       return {
         ok: false,
         strategy: "roll20-page-model",
         characterFound: false,
         characterName: payload.characterName,
-        message: `캐릭터 '${payload.characterName}'를 Roll20 모델에서 찾지 못했습니다.`,
+        message: targetMessage,
       };
     }
 
     const characterId = getModelId(character);
+    const characterName = getCharacterDisplayName(character, payload.characterName);
     const attributeCollection = getAttributeCollection(character, characterId);
     const abilityCollection = getAbilityCollection(character, characterId);
     const attributes = applyAttributes(attributeCollection, payload.attributes || [], characterId);
@@ -468,14 +638,15 @@
     const sheetUi = await getSheetUiState({
       ok,
       character,
-      characterName: payload.characterName,
+      characterName,
     });
 
     return {
       ok,
       strategy: "roll20-page-model",
+      targetStrategy: target.source,
       characterFound: true,
-      characterName: payload.characterName,
+      characterName,
       characterId,
       attributes,
       abilities,

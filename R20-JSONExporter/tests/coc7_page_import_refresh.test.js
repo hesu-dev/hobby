@@ -82,7 +82,7 @@ function runPageImporter({ document }) {
     console,
   };
   vm.runInNewContext(source, context);
-  return { window, character };
+  return { window, character, campaign: window.Campaign };
 }
 
 function dispatchImport(window, payload) {
@@ -186,4 +186,136 @@ test("page import reports a reopen hint when no sheet is open", async () => {
   assert.equal(response.sheetUi.autoReopenAttempted, false);
   assert.equal(response.sheetUi.needsReopen, false);
   assert.equal(character.triggerCalls.includes("change"), false);
+});
+
+test("page import targets the active open sheet before matching the payload name", async () => {
+  const activeElement = {};
+  const activeDialog = {
+    textContent: "앨리스",
+    dataset: { characterid: "-alice" },
+    style: { zIndex: "200" },
+    contains(node) {
+      return node === activeElement;
+    },
+    getAttribute(name) {
+      if (name === "data-characterid") return "-alice";
+      return "";
+    },
+    querySelector(selector) {
+      if (selector.includes("attr_character_name")) {
+        return { value: "앨리스", textContent: "" };
+      }
+      return null;
+    },
+  };
+  const roseDialog = {
+    textContent: "로즈",
+    dataset: { characterid: "-rose" },
+    style: { zIndex: "100" },
+    contains() {
+      return false;
+    },
+    getAttribute(name) {
+      if (name === "data-characterid") return "-rose";
+      return "";
+    },
+    querySelector(selector) {
+      if (selector.includes("attr_character_name")) {
+        return { value: "로즈", textContent: "" };
+      }
+      return null;
+    },
+  };
+
+  const { window, campaign } = runPageImporter({
+    document: {
+      activeElement,
+      querySelectorAll(selector) {
+        if (selector.includes(".ui-dialog")) return [roseDialog, activeDialog];
+        return [];
+      },
+    },
+  });
+  campaign.characters.models.push(
+    createModel({
+      id: "-alice",
+      name: "앨리스",
+    })
+  );
+
+  const response = await dispatchImport(window, {
+    characterName: "로즈",
+    attributes: [
+      {
+        inputName: "attr_str",
+        roll20Name: "str",
+        current: "65",
+        max: "",
+      },
+    ],
+    abilities: [
+      {
+        name: "R20JE-활성시트",
+        action: "/em active sheet",
+        istokenaction: false,
+      },
+    ],
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.characterId, "-alice");
+  assert.equal(response.characterName, "앨리스");
+  assert.equal(campaign.attribs.models[0].attributes.characterid, "-alice");
+  assert.equal(campaign.abilities.models[0].attributes.characterid, "-alice");
+});
+
+test("page import falls back to payload name when only a journal character node exists", async () => {
+  const journalNode = {
+    textContent: "앨리스",
+    dataset: { characterid: "-alice" },
+    style: {},
+    contains() {
+      return false;
+    },
+    getAttribute(name) {
+      if (name === "data-characterid") return "-alice";
+      return "";
+    },
+    querySelector() {
+      return null;
+    },
+  };
+
+  const { window, campaign } = runPageImporter({
+    document: {
+      activeElement: null,
+      querySelectorAll(selector) {
+        if (selector === "[data-characterid]") return [journalNode];
+        return [];
+      },
+    },
+  });
+  campaign.characters.models.push(
+    createModel({
+      id: "-alice",
+      name: "앨리스",
+    })
+  );
+
+  const response = await dispatchImport(window, {
+    characterName: "로즈",
+    attributes: [],
+    abilities: [
+      {
+        name: "R20JE-이름기준",
+        action: "/em payload name",
+        istokenaction: false,
+      },
+    ],
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.characterId, "-rose");
+  assert.equal(response.targetStrategy, "payload-name");
+  assert.equal(campaign.abilities.models[0].attributes.characterid, "-rose");
 });

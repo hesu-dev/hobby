@@ -23,6 +23,7 @@
   const getMessageContext = () => window.Roll20CleanerMessageContext || {};
   const getRoleParser = () => window.Roll20CleanerRoleParser || {};
   const getCoc7Import = () => window.Roll20CleanerCoc7Import || {};
+  const getMacroImport = () => window.Roll20CleanerMacroImport || {};
   const getStyle = () => window.Roll20CleanerStyle || {};
   const getDom = () => window.Roll20CleanerDom || {};
   const getData = () => window.Roll20CleanerData || {};
@@ -1241,8 +1242,29 @@
       }
 
       applyCoc7ImportText(message?.text || "", {
-        defaultCharacterName: message?.defaultCharacterName || "로즈",
+        defaultCharacterName: message?.defaultCharacterName || "",
       })
+        .then((result) => sendResponse(result))
+        .catch((error) =>
+          sendResponse({
+            ok: false,
+            errorMessage: toSimpleErrorMessage(error),
+          })
+        );
+      return true;
+    }
+
+    if (message?.type === "APPLY_MACRO_IMPORT") {
+      const { applyMacroImportText } = getMacroImport();
+      if (typeof applyMacroImportText !== "function") {
+        sendResponse({
+          ok: false,
+          errorMessage: "Macro import 모듈이 준비되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.",
+        });
+        return;
+      }
+
+      applyMacroImportText(message?.text || "")
         .then((result) => sendResponse(result))
         .catch((error) =>
           sendResponse({

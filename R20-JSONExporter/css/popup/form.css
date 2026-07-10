@@ -28,19 +28,32 @@
   line-height: 1.4;
 }
 
-.coc-import-panel {
+.sheet-help-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 10px;
+  color: #2f63b5;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.coc-import-panel,
+.macro-import-panel {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
 }
 
-.coc-import-actions {
+.coc-import-actions,
+.macro-import-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
-.coc-import-actions .btn {
+.coc-import-actions .btn,
+.macro-import-actions .btn {
   margin-top: 0;
 }
 

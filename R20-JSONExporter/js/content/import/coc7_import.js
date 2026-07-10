@@ -5,7 +5,6 @@
   const PAGE_IMPORT_READY_EVENT = "R20JE_COC7_IMPORT_READY";
   const PAGE_IMPORT_REQUEST_EVENT = "R20JE_COC7_IMPORT_REQUEST";
   const PAGE_IMPORT_RESPONSE_EVENT = "R20JE_COC7_IMPORT_RESPONSE";
-  const DEFAULT_CHARACTER_NAME = "로즈";
 
   let pageImporterInjectionPromise = null;
 
@@ -141,11 +140,8 @@
     }
 
     const characterName = stringifyValue(
-      payload.characterName || payload.character || payload.name || options.defaultCharacterName || DEFAULT_CHARACTER_NAME
+      payload.characterName || payload.character || payload.name || options.defaultCharacterName || ""
     ).trim();
-    if (!characterName) {
-      throw new Error("character 이름이 필요합니다.");
-    }
 
     const attributes = collectAttributeEntries(payload);
     const abilities = collectAbilityEntries(payload);
@@ -173,22 +169,6 @@
     return normalizeCoc7ImportPayload(parsed, options);
   }
 
-  function buildCoc7ImportSampleText(characterName = DEFAULT_CHARACTER_NAME) {
-    const payload = {
-      character: characterName || DEFAULT_CHARACTER_NAME,
-      attributes: {
-        r20je_import_test: {
-          current: "extension-applied",
-          max: "",
-        },
-      },
-      abilities: {
-        "R20JE-테스트": "/em R20JE 테스트 매크로가 실행되었습니다. [[1d100]]",
-      },
-    };
-    return `[R20JE:COC7_IMPORT:1]\n${JSON.stringify(payload, null, 2)}\n[/R20JE]`;
-  }
-
   function createRequestId() {
     return `r20je-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
@@ -198,7 +178,67 @@
     return stringifyValue("value" in el ? el.value : el.textContent).trim();
   }
 
+  function queryElements(selector) {
+    if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return [];
+    try {
+      return [...document.querySelectorAll(selector)];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function nodeContains(root, node) {
+    if (!root || !node) return false;
+    if (root === node) return true;
+    if (typeof root.contains === "function") return root.contains(node);
+    return false;
+  }
+
+  function getNumericZIndex(node) {
+    const raw =
+      node?.style?.zIndex ||
+      (typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+        ? window.getComputedStyle(node)?.zIndex
+        : "");
+    const value = Number.parseInt(raw, 10);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function hasSheetInputs(root) {
+    return !!root?.querySelector?.('[name^="attr_"]');
+  }
+
+  function uniqueElements(elements) {
+    return [...new Set(elements.filter(Boolean))];
+  }
+
+  function findActiveOpenSheetRoot() {
+    const selectors = [".ui-dialog", ".ui-dialog-content", ".characterdialog", ".charactersheet", ".charsheet"];
+    const roots = uniqueElements(selectors.flatMap((selector) => queryElements(selector))).filter(hasSheetInputs);
+    const activeElement =
+      typeof document !== "undefined" && "activeElement" in document ? document.activeElement : null;
+
+    const activeRoot = roots.find((root) => nodeContains(root, activeElement));
+    if (activeRoot) return activeRoot;
+
+    if (roots.length === 1) return roots[0];
+
+    const sortedByStack = roots
+      .map((root, index) => ({
+        root,
+        index,
+        zIndex: getNumericZIndex(root),
+      }))
+      .filter((item) => item.zIndex > 0)
+      .sort((a, b) => b.zIndex - a.zIndex || b.index - a.index);
+
+    return sortedByStack[0]?.root || null;
+  }
+
   function findLikelySheetRootFromNameInput(characterName) {
+    const activeRoot = findActiveOpenSheetRoot();
+    if (activeRoot) return activeRoot;
+
     const selectors = [
       '[name="attr_character_name"]',
       '[name="attr_name"]',
@@ -409,7 +449,6 @@
   const api = {
     parseCoc7ImportText,
     normalizeCoc7ImportPayload,
-    buildCoc7ImportSampleText,
     applyAttributesToOpenSheet,
     applyCoc7ImportText,
   };

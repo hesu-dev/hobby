@@ -147,8 +147,8 @@ test("popup controller measures and exports Roll20 JSON through the active tab",
   assert.equal(doc.elements.statusMetrics.textContent, "메시지 12개");
   assert.equal(doc.elements.statusPayload.textContent, "현재 파일 크기 30 B");
   assert.equal(doc.elements.statusInbox.textContent, "");
-  assert.equal(doc.elements.exportButton.disabled, false);
-  assert.equal(doc.elements.exportButton.textContent, "리딩로그로 복사하기");
+  assert.equal(doc.elements.exportButton.disabled, true);
+  assert.equal(doc.elements.exportButton.textContent, "복사 완료");
 });
 
 test("popup controller proceeds when ping has no response but measurement succeeds", async () => {

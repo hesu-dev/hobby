@@ -8,8 +8,9 @@ const avatarListEl = document.getElementById("avatarList");
 const downloadAvatarMappedHtmlEl = document.getElementById("downloadAvatarMappedHtml");
 const downloadAvatarMappedJsonEl = document.getElementById("downloadAvatarMappedJson");
 const cocImportPayloadEl = document.getElementById("cocImportPayload");
-const fillCocImportSampleEl = document.getElementById("fillCocImportSample");
 const applyCocImportEl = document.getElementById("applyCocImport");
+const macroImportPayloadEl = document.getElementById("macroImportPayload");
+const applyMacroImportEl = document.getElementById("applyMacroImport");
 const progressWrapEl = document.getElementById("progressWrap");
 const progressBarEl = document.getElementById("progressBar");
 const progressTextEl = document.getElementById("progressText");
@@ -35,23 +36,7 @@ const inputLockReasons = new Set();
 const READY_STATUS_LOADING_TEXT = "페이지 로딩 중입니다. 잠시 후 다시 시도하세요.";
 const READY_STATUS_READY_TEXT = "준비되었습니다.";
 const READY_STATUS_PROBE_INTERVAL_MS = 1200;
-const COC_IMPORT_DEFAULT_CHARACTER_NAME = "로즈";
-
-function buildCocImportSampleText(characterName = COC_IMPORT_DEFAULT_CHARACTER_NAME) {
-  const payload = {
-    character: characterName,
-    attributes: {
-      r20je_import_test: {
-        current: "extension-applied",
-        max: "",
-      },
-    },
-    abilities: {
-      "R20JE-테스트": "/em R20JE 테스트 매크로가 실행되었습니다. [[1d100]]",
-    },
-  };
-  return `[R20JE:COC7_IMPORT:1]\n${JSON.stringify(payload, null, 2)}\n[/R20JE]`;
-}
+const COC_IMPORT_FALLBACK_TARGET_LABEL = "현재 시트";
 
 // ===== UI primitives =====
 function setStatus(text) {
@@ -109,7 +94,7 @@ function activatePopupTab(tabButton) {
     panel.classList.toggle("hidden", !isActive);
     panel.hidden = !isActive;
   });
-  feedbackPanelEl?.classList.toggle("hidden", panelId === "macroTabPanel");
+  feedbackPanelEl?.classList.remove("hidden");
 }
 
 function normalizeUiError(error) {
@@ -174,6 +159,7 @@ function injectContentScript(tabId) {
           "js/content/export/parsers/coc/coc_rule_parser.js",
           "js/content/export/parsers/insane/insane_rule_parser.js",
           "js/content/import/coc7_import.js",
+          "js/content/import/macro_import.js",
           "js/content/export/chat_json_export.js",
           "js/content/export/chat_role_parser.js",
           "js/content/dom/style_processor.js",
@@ -725,7 +711,7 @@ function formatCocImportResult(response) {
     : response?.sheetUi?.needsReopen
     ? " 열린 시트를 닫았다 다시 열면 변경사항이 보입니다."
     : "";
-  return `${response.characterName || COC_IMPORT_DEFAULT_CHARACTER_NAME} 적용 완료: Attributes ${appliedAttributes}/${requestedAttributes}, Abilities ${pageAbilities}/${requestedAbilities}.${reopenHint}`;
+  return `${response.characterName || COC_IMPORT_FALLBACK_TARGET_LABEL} 적용 완료: Attributes ${appliedAttributes}/${requestedAttributes}, Abilities ${pageAbilities}/${requestedAbilities}.${reopenHint}`;
 }
 
 async function runCocImportApply() {
@@ -747,7 +733,6 @@ async function runCocImportApply() {
     setProgress(20, "CoC import 적용 중입니다...");
     const response = await requestWithRecovery(tabId, "APPLY_COC7_IMPORT", {
       text,
-      defaultCharacterName: COC_IMPORT_DEFAULT_CHARACTER_NAME,
     });
     setProgress(100, response?.ok ? "적용 완료" : "적용 실패");
     setStatus(formatCocImportResult(response));
@@ -757,6 +742,51 @@ async function runCocImportApply() {
     setStatus(`CoC import 적용 실패: ${normalizeUiError(error)}`);
   } finally {
     unlockInputs("coc-import-apply");
+  }
+}
+
+function formatMacroImportResult(response) {
+  if (!response?.ok) {
+    const pageMessage = response?.pageResult?.message || "";
+    const message = pageMessage || response?.errorMessage || "적용하지 못했습니다.";
+    return `매크로 등록 실패: ${message}`;
+  }
+
+  const requestedMacros = Number(response?.requested?.macros) || 0;
+  const appliedMacros = Number(response?.applied?.macros) || 0;
+  const createdMacros = Number(response?.pageResult?.macros?.created?.length) || 0;
+  const updatedMacros = Number(response?.pageResult?.macros?.updated?.length) || 0;
+  return `매크로 등록 완료: ${appliedMacros}/${requestedMacros} (생성 ${createdMacros}, 수정 ${updatedMacros}).`;
+}
+
+async function runMacroImportApply() {
+  try {
+    const text = String(macroImportPayloadEl?.value || "").trim();
+    if (!text) {
+      setStatus("붙여넣기 입력창에 Macro import JSON을 넣어주세요.");
+      return;
+    }
+
+    const tabId = await getValidatedActiveTabId();
+    const ready = await ensureContentScriptLoaded(tabId);
+    if (!ready) {
+      setStatus("컨텐츠 스크립트 연결에 실패했습니다. 페이지를 새로고침 해주세요.");
+      return;
+    }
+
+    lockInputs("macro-import-apply");
+    setProgress(20, "매크로를 등록 중입니다...");
+    const response = await requestWithRecovery(tabId, "APPLY_MACRO_IMPORT", {
+      text,
+    });
+    setProgress(100, response?.ok ? "등록 완료" : "등록 실패");
+    setStatus(formatMacroImportResult(response));
+    setTimeout(() => hideProgress(), 900);
+  } catch (error) {
+    hideProgress();
+    setStatus(`매크로 등록 실패: ${normalizeUiError(error)}`);
+  } finally {
+    unlockInputs("macro-import-apply");
   }
 }
 
@@ -778,14 +808,11 @@ function bindUiEvents() {
     downloadAvatarMappedHtmlEl.addEventListener("click", runAvatarMappedHtmlDownload);
   }
   downloadAvatarMappedJsonEl.addEventListener("click", runReadingLogJsonDownload);
-  if (fillCocImportSampleEl && cocImportPayloadEl) {
-    fillCocImportSampleEl.addEventListener("click", () => {
-      cocImportPayloadEl.value = buildCocImportSampleText();
-      setStatus("로즈 테스트용 CoC import 샘플을 입력했습니다.");
-    });
-  }
   if (applyCocImportEl) {
     applyCocImportEl.addEventListener("click", runCocImportApply);
+  }
+  if (applyMacroImportEl) {
+    applyMacroImportEl.addEventListener("click", runMacroImportApply);
   }
 
   window.addEventListener("unload", () => {

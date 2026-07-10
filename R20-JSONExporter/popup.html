@@ -29,8 +29,9 @@
         aria-selected="false"
         aria-controls="sheetTabPanel"
       >
-        시트
+        r20시트
       </button>
+      <!--
       <button
         id="macroTab"
         class="tab-button"
@@ -41,6 +42,7 @@
       >
         매크로
       </button>
+      -->
     </nav>
     <section class="card">
       <section id="readingLogTabPanel" class="tab-panel" role="tabpanel" aria-labelledby="readingLogTab">
@@ -86,28 +88,53 @@
       </section>
       <section id="sheetTabPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="sheetTab">
         <section id="cocImportPanel" class="coc-import-panel">
+          <a
+            id="sheetImportGuideLink"
+            class="sheet-help-link"
+            href="https://sukenell.github.io/cclog_sheet/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            사용방법
+          </a>
           <label class="field">
-            <span class="label">CoC 공식 시트 import 붙여넣기</span>
+            <span class="label">현재 한국어만 지원합니다, Roll20 캐릭터 시트를 켠 상태에서 사용하세요.</span>
             <textarea
               id="cocImportPayload"
               class="text-input textarea-input"
               rows="8"
               spellcheck="false"
-              placeholder="[R20JE:COC7_IMPORT:1] JSON [/R20JE]"
+              placeholder="비밀 주사위 복사로 복사한 내용을 이곳에 붙여넣기 하세요."
             ></textarea>
           </label>
           <div class="coc-import-actions">
-            <button id="fillCocImportSample" class="btn btn-secondary" type="button">
-              로즈 샘플 넣기
-            </button>
             <button id="applyCocImport" class="btn btn-quaternary" type="button">
-              CoC 적용
+              캐릭터 시트 적용
             </button>
           </div>
         </section>
       </section>
+      <!--
       <section id="macroTabPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="macroTab">
+        <section id="macroImportPanel" class="macro-import-panel">
+          <label class="field">
+            <span class="label">Roll20 매크로 import 붙여넣기</span>
+            <textarea
+              id="macroImportPayload"
+              class="text-input textarea-input"
+              rows="8"
+              spellcheck="false"
+              placeholder="[R20JE:MACRO_IMPORT:1] JSON [/R20JE]"
+            ></textarea>
+          </label>
+          <div class="macro-import-actions">
+            <button id="applyMacroImport" class="btn btn-quaternary" type="button">
+              매크로 등록
+            </button>
+          </div>
+        </section>
       </section>
+      -->
       <div id="feedbackPanel" class="feedback-panel">
         <div id="progressWrap" class="progress-wrap hidden" aria-live="polite">
           <div class="progress-track">

@@ -6,16 +6,21 @@ const path = require("node:path");
 const popupHtml = fs.readFileSync(path.join(__dirname, "..", "popup.html"), "utf8");
 const popupJs = fs.readFileSync(path.join(__dirname, "..", "js", "popup", "popup.js"), "utf8");
 const manifest = require("../manifest.json");
+const livePopupHtml = popupHtml.replace(/<!--[\s\S]*?-->/g, "");
 
-test("popup exposes ReadingLog, sheet, and macro tabs before the panel content", () => {
+test("popup exposes ReadingLog and sheet tabs while the macro tab is disabled", () => {
   assert.match(
-    popupHtml,
-    /<nav class="tabs" role="tablist" aria-label="popup sections">[\s\S]*?<button[\s\S]*?id="readingLogTab"[\s\S]*?>\s*리딩로그\s*<\/button>[\s\S]*?<button[\s\S]*?id="sheetTab"[\s\S]*?>\s*시트\s*<\/button>[\s\S]*?<button[\s\S]*?id="macroTab"[\s\S]*?>\s*매크로\s*<\/button>[\s\S]*?<\/nav>/
+    livePopupHtml,
+    /<nav class="tabs" role="tablist" aria-label="popup sections">[\s\S]*?<button[\s\S]*?id="readingLogTab"[\s\S]*?>\s*리딩로그\s*<\/button>[\s\S]*?<button[\s\S]*?id="sheetTab"[\s\S]*?>\s*r20시트\s*<\/button>[\s\S]*?<\/nav>/
   );
   assert.match(
-    popupHtml,
-    /<section id="readingLogTabPanel"[\s\S]*?<section id="sheetTabPanel"[\s\S]*?<section id="macroTabPanel"/
+    livePopupHtml,
+    /<section id="readingLogTabPanel"[\s\S]*?<section id="sheetTabPanel"[\s\S]*?<div id="feedbackPanel"/
   );
+  assert.doesNotMatch(livePopupHtml, /id="macroTab"/);
+  assert.doesNotMatch(livePopupHtml, /id="macroTabPanel"/);
+  assert.match(popupHtml, /<!--[\s\S]*id="macroTab"[\s\S]*-->/);
+  assert.match(popupHtml, /<!--[\s\S]*id="macroTabPanel"[\s\S]*-->/);
   assert.match(popupJs, /querySelectorAll\("\[role=\\"tab\\"\]"\)/);
 });
 
@@ -45,32 +50,33 @@ test("popup exposes the renamed image-link check and shared ReadingLog download 
 
 test("popup exposes the CoC import paste box in the sheet tab", () => {
   assert.match(
-    popupHtml,
-    /<section id="sheetTabPanel"[\s\S]*?<section id="cocImportPanel"[\s\S]*?CoC 공식 시트 import 붙여넣기[\s\S]*?<button id="fillCocImportSample"[\s\S]*?<button id="applyCocImport"[\s\S]*?<section id="macroTabPanel"/
+    livePopupHtml,
+    /<section id="sheetTabPanel"[\s\S]*?<section id="cocImportPanel"[\s\S]*?<a[\s\S]*?id="sheetImportGuideLink"[\s\S]*?href="https:\/\/sukenell\.github\.io\/cclog_sheet\/"[\s\S]*?>\s*사용방법\s*<\/a>[\s\S]*?현재 한국어만 지원합니다, Roll20 캐릭터 시트를 켠 상태에서 사용하세요\.[\s\S]*?<button id="applyCocImport"[\s\S]*?캐릭터 시트 적용[\s\S]*?<div id="feedbackPanel"/
   );
-  assert.match(popupHtml, /<textarea[\s\S]*?id="cocImportPayload"/);
-  assert.match(popupHtml, /<button id="fillCocImportSample"/);
-  assert.match(popupHtml, /<button id="applyCocImport"/);
-  assert.match(popupJs, /로즈 테스트용 CoC import 샘플을 입력했습니다\./);
+  assert.match(livePopupHtml, /<textarea[\s\S]*?id="cocImportPayload"/);
+  assert.match(livePopupHtml, /placeholder="비밀 주사위 복사로 복사한 내용을 이곳에 붙여넣기 하세요\."/);
+  assert.doesNotMatch(livePopupHtml, /fillCocImportSample/);
+  assert.doesNotMatch(livePopupHtml, /로즈 샘플 넣기/);
+  assert.match(livePopupHtml, /<button id="applyCocImport"/);
+  assert.doesNotMatch(popupJs, /로즈 테스트용 CoC import 샘플을 입력했습니다\./);
 });
 
-test("popup keeps the macro tab panel empty until macro features exist", () => {
-  assert.match(
-    popupHtml,
-    /<section id="macroTabPanel" class="tab-panel hidden" role="tabpanel" aria-labelledby="macroTab">\s*<\/section>/
-  );
+test("popup keeps the macro import tab commented out until the feature is re-enabled", () => {
+  assert.doesNotMatch(livePopupHtml, /macroImportPanel/);
+  assert.doesNotMatch(livePopupHtml, /macroImportPayload/);
+  assert.doesNotMatch(livePopupHtml, /applyMacroImport/);
+  assert.match(popupHtml, /<!--[\s\S]*macroImportPanel[\s\S]*-->/);
+  assert.match(popupHtml, /<!--[\s\S]*applyMacroImport[\s\S]*-->/);
 });
 
-test("popup hides shared feedback while the macro tab is active", () => {
+test("popup keeps shared feedback visible", () => {
   assert.match(
-    popupHtml,
+    livePopupHtml,
     /<div id="feedbackPanel" class="feedback-panel">[\s\S]*?<div id="progressWrap"[\s\S]*?<small id="status"/
   );
   assert.match(popupJs, /const feedbackPanelEl = document\.getElementById\("feedbackPanel"\);/);
-  assert.match(
-    popupJs,
-    /feedbackPanelEl\?\.classList\.toggle\("hidden", panelId === "macroTabPanel"\);/
-  );
+  assert.match(popupJs, /feedbackPanelEl\?\.classList\.remove\("hidden"\);/);
+  assert.doesNotMatch(popupJs, /panelId === "macroTabPanel"/);
 });
 
 test("popup keeps the hidden message toggle label and helper text outside the toggle body", () => {
