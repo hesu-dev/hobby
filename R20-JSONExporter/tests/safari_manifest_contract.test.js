@@ -19,7 +19,7 @@ const safariResourcesRoot = path.dirname(manifestPath);
 test("safari source manifest declares popup messaging and native save permissions", () => {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
-  assert.equal(manifest.version, "0.8.3");
+  assert.equal(manifest.version, "0.8.4");
   assert.equal(manifest.name, "리딩로그: 파일 가져오기");
   assert.equal(
     manifest.description,

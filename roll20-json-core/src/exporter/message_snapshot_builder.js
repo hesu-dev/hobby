@@ -1,3 +1,5 @@
+const parserUtils = require("../parsers/parser_utils.js");
+
 function normalizeSpeakerName(raw) {
   const compact = String(raw || "").replace(/\s+/g, " ").trim();
   if (!compact) return "";
@@ -48,6 +50,18 @@ function inferRuleTypeFromDiceRule(rule = "") {
   if (normalized.includes("insane")) return "Insane";
   if (normalized.includes("coc")) return "COC";
   return "";
+}
+
+function resolveSnapshotText(message) {
+  const rawHtml = String(message?.html || "");
+  if (
+    rawHtml &&
+    typeof parserUtils.serializeInlineFormattingHtmlToMarkdown === "function"
+  ) {
+    const serialized = parserUtils.serializeInlineFormattingHtmlToMarkdown(rawHtml);
+    if (serialized) return serialized;
+  }
+  return String(message?.text || "");
 }
 
 function buildMessageSnapshots({
@@ -120,7 +134,7 @@ function buildMessageSnapshots({
       role: roleForEntry,
       timestamp: effectiveTimestamp,
       textColor: String(message?.textColor || "").trim(),
-      text: String(message?.text || ""),
+      text: resolveSnapshotText(message),
       imageUrl: message?.imageUrl || null,
       speakerImageUrl: speakerImageUrl || null,
       dice,

@@ -297,11 +297,22 @@
     return absolute;
   }
 
-  function extractMessageText(messageEl) {
+  function cloneMessageBody(messageEl) {
     const clone = messageEl?.cloneNode?.(true);
-    if (!clone) return normalizeMessageText(messageEl?.textContent || "");
+    if (!clone) return null;
 
     clone.querySelectorAll?.("span.by, span.tstamp, .avatar").forEach((node) => node.remove?.());
+    return clone;
+  }
+
+  function extractMessageHtml(messageEl) {
+    const clone = cloneMessageBody(messageEl);
+    return String(clone?.innerHTML || "");
+  }
+
+  function extractMessageText(messageEl) {
+    const clone = cloneMessageBody(messageEl);
+    if (!clone) return normalizeMessageText(messageEl?.textContent || "");
 
     if (
       hasDescStyle(messageEl) &&
@@ -309,6 +320,15 @@
     ) {
       const descWithLineBreaks = chatJsonApi.joinDescAnchorLines(clone.innerHTML || "", "\n");
       if (descWithLineBreaks) return descWithLineBreaks;
+    }
+
+    const serializeHtml =
+      typeof sharedCoreApi.parserUtils?.serializeInlineFormattingHtmlToMarkdown === "function"
+        ? sharedCoreApi.parserUtils.serializeInlineFormattingHtmlToMarkdown
+        : null;
+    if (serializeHtml && clone.innerHTML) {
+      const serialized = serializeHtml(clone.innerHTML || "");
+      if (serialized) return normalizeMessageText(serialized);
     }
 
     return normalizeMessageText(clone.textContent || "");
@@ -505,6 +525,7 @@
         timestamp: rawTimestamp,
         textColor: getMessageTextColor(messageEl),
         text: extractMessageText(messageEl),
+        html: extractMessageHtml(messageEl),
         imageUrl: getInlineMessageImageUrl(messageEl, doc),
         avatarOriginalUrl: currentSrc,
         avatarResolvedUrl: resolvedAvatarUrl,

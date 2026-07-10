@@ -251,6 +251,29 @@ test("buildSafariExportPayload serializes the current DOM into schema v1 json", 
   );
 });
 
+test("buildSafariExportPayload serializes inline em and strong html to markdown text", async () => {
+  const visibleMessage = createMessage({
+    classNames: ["message"],
+    speaker: " KP: ",
+    timestamp: "8:15 PM",
+    text: "안녕하세요 안녕하세요 안녕하세요",
+    html: "<em>안녕하세요</em> <strong>안녕하세요</strong> <strong><em>안녕하세요</em></strong>",
+    messageId: "msg-emphasis",
+  });
+  const doc = createDocument({
+    hrefs: ["https://app.roll20.net/campaigns/details/12345/%EC%84%B8%EC%85%98A"],
+    messages: [visibleMessage],
+  });
+
+  const payload = await buildSafariExportPayload({ doc });
+  const parsed = JSON.parse(payload.jsonText);
+
+  assert.equal(
+    parsed.lines[0].text,
+    "*안녕하세요* **안녕하세요** ***안녕하세요***"
+  );
+});
+
 test("buildSafariExportPayload inherits the previous speaker avatar url when the current message has no avatar", async () => {
   const doc = createDocument({
     hrefs: ["https://app.roll20.net/campaigns/details/12345/%EC%84%B8%EC%85%98A"],

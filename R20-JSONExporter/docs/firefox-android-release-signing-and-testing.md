@@ -4,7 +4,7 @@
 
 - Unsigned release package: `/Users/he-su/Desktop/chrome_extension/R20-JSONExporter/release/firefox-mobile.zip`
 - Fixed release ID: `r20-json-exporter-firefox@reha.dev`
-- Current release version: `0.8.3`
+- Current release version: `0.8.4`
 
 ## Sign for self-distribution
 
@@ -47,4 +47,4 @@
 - Direct download works even if the avatar editor was never opened.
 - Direct download stores the redirected avatar URL directly in `input.speakerImages.avatar.url`.
 - Edited avatar mappings override the redirected URL in the exported JSON.
-- The installed add-on version shown in Firefox is `0.8.3`.
+- The installed add-on version shown in Firefox is `0.8.4`.

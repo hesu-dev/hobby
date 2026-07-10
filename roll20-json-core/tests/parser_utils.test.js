@@ -20,3 +20,35 @@ test("extractTemplateName reads rolltemplate names", () => {
     "coc-bonus-penalty"
   );
 });
+
+test("serializeInlineFormattingHtmlToMarkdown preserves em and strong as markdown markers", () => {
+  assert.equal(
+    parserUtils.serializeInlineFormattingHtmlToMarkdown("<em>안녕하세요</em>"),
+    "*안녕하세요*"
+  );
+  assert.equal(
+    parserUtils.serializeInlineFormattingHtmlToMarkdown("<strong>안녕하세요</strong>"),
+    "**안녕하세요**"
+  );
+  assert.equal(
+    parserUtils.serializeInlineFormattingHtmlToMarkdown(
+      "<strong><em>안녕하세요</em></strong>"
+    ),
+    "***안녕하세요***"
+  );
+  assert.equal(
+    parserUtils.serializeInlineFormattingHtmlToMarkdown(
+      "<em><strong>안녕하세요</strong></em>"
+    ),
+    "***안녕하세요***"
+  );
+});
+
+test("serializeInlineFormattingHtmlToMarkdown decodes basic entities while stripping non-formatting tags", () => {
+  assert.equal(
+    parserUtils.serializeInlineFormattingHtmlToMarkdown(
+      '<span><em>&lt;단서&gt;</em></span> <span><strong>A&amp;B</strong></span>'
+    ),
+    "*<단서>* **A&B**"
+  );
+});

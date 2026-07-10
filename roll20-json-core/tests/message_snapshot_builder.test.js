@@ -106,3 +106,22 @@ test("message snapshot builder clears avatar context when the speaker changes an
   assert.equal(result.snapshots[1].speaker, "PL");
   assert.equal(result.snapshots[1].speakerImageUrl, null);
 });
+
+test("message snapshot builder serializes inline em and strong html to markdown text", () => {
+  const result = buildMessageSnapshots({
+    messages: [
+      {
+        speaker: "KP:",
+        role: "character",
+        timestamp: "8:15 PM",
+        text: "안녕하세요 안녕하세요 안녕하세요",
+        html: "<em>안녕하세요</em> <strong>안녕하세요</strong> <strong><em>안녕하세요</em></strong>",
+      },
+    ],
+  });
+
+  assert.equal(
+    result.snapshots[0].text,
+    "*안녕하세요* **안녕하세요** ***안녕하세요***"
+  );
+});

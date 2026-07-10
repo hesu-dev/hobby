@@ -43,6 +43,82 @@ function stripHtmlTags(html) {
   return String(html || "").replace(/<[^>]*>/g, " ");
 }
 
+function decodeHtmlEntity(entity) {
+  const raw = String(entity || "");
+  const normalized = raw.toLowerCase();
+  if (normalized === "amp") return "&";
+  if (normalized === "lt") return "<";
+  if (normalized === "gt") return ">";
+  if (normalized === "quot") return '"';
+  if (normalized === "apos") return "'";
+  if (normalized === "nbsp") return " ";
+
+  const decimalMatch = normalized.match(/^#(\d+)$/);
+  if (decimalMatch?.[1]) {
+    const codePoint = Number(decimalMatch[1]);
+    if (Number.isFinite(codePoint)) {
+      try {
+        return String.fromCodePoint(codePoint);
+      } catch (_) {
+        return `&${raw};`;
+      }
+    }
+  }
+
+  const hexMatch = normalized.match(/^#x([0-9a-f]+)$/);
+  if (hexMatch?.[1]) {
+    const codePoint = Number.parseInt(hexMatch[1], 16);
+    if (Number.isFinite(codePoint)) {
+      try {
+        return String.fromCodePoint(codePoint);
+      } catch (_) {
+        return `&${raw};`;
+      }
+    }
+  }
+
+  return `&${raw};`;
+}
+
+function decodeHtmlEntities(raw) {
+  return String(raw || "").replace(/&([a-z]+|#\d+|#x[0-9a-f]+);/gi, (_match, entity) =>
+    decodeHtmlEntity(entity)
+  );
+}
+
+function markdownMarkerForFormattingTag(tagName) {
+  const normalized = String(tagName || "").trim().toLowerCase();
+  if (normalized === "em" || normalized === "i") return "*";
+  if (normalized === "strong" || normalized === "b") return "**";
+  return "";
+}
+
+function serializeInlineFormattingHtmlToMarkdown(html) {
+  const source = String(html || "");
+  if (!source) return "";
+
+  let output = "";
+  let cursor = 0;
+  const tagRegex = /<\s*(\/)?\s*([a-z][a-z0-9-]*)\b[^>]*>/gi;
+  let matched = tagRegex.exec(source);
+
+  while (matched) {
+    output += decodeHtmlEntities(source.slice(cursor, matched.index));
+
+    const isClosingTag = !!matched[1];
+    const tagName = matched[2] || "";
+    const marker = markdownMarkerForFormattingTag(tagName);
+    if (marker) output += marker;
+    if (!isClosingTag && /^(br|hr)$/i.test(tagName)) output += " ";
+
+    cursor = matched.index + matched[0].length;
+    matched = tagRegex.exec(source);
+  }
+
+  output += decodeHtmlEntities(source.slice(cursor));
+  return output.replace(/\s+/g, " ").trim();
+}
+
 function normalizeDoubleQuotes(raw) {
   return String(raw || "").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\u275D\u275E\u301D\u301E\u301F\uFF02]/g, '"');
 }
@@ -232,6 +308,8 @@ function collectTdTexts(rowHtml) {
 
 module.exports = {
   stripHtmlTags,
+  decodeHtmlEntities,
+  serializeInlineFormattingHtmlToMarkdown,
   normalizeDoubleQuotes,
   normalizeText,
   toSafeText,
@@ -1293,6 +1371,8 @@ module.exports = {
 
 },
 "exporter/message_snapshot_builder.js": function(module, exports, require) {
+const parserUtils = require("parsers/parser_utils.js");
+
 function normalizeSpeakerName(raw) {
   const compact = String(raw || "").replace(/\s+/g, " ").trim();
   if (!compact) return "";
@@ -1343,6 +1423,18 @@ function inferRuleTypeFromDiceRule(rule = "") {
   if (normalized.includes("insane")) return "Insane";
   if (normalized.includes("coc")) return "COC";
   return "";
+}
+
+function resolveSnapshotText(message) {
+  const rawHtml = String(message?.html || "");
+  if (
+    rawHtml &&
+    typeof parserUtils.serializeInlineFormattingHtmlToMarkdown === "function"
+  ) {
+    const serialized = parserUtils.serializeInlineFormattingHtmlToMarkdown(rawHtml);
+    if (serialized) return serialized;
+  }
+  return String(message?.text || "");
 }
 
 function buildMessageSnapshots({
@@ -1415,7 +1507,7 @@ function buildMessageSnapshots({
       role: roleForEntry,
       timestamp: effectiveTimestamp,
       textColor: String(message?.textColor || "").trim(),
-      text: String(message?.text || ""),
+      text: resolveSnapshotText(message),
       imageUrl: message?.imageUrl || null,
       speakerImageUrl: speakerImageUrl || null,
       dice,

@@ -716,14 +716,45 @@
     });
   }
 
+  function cloneMessageBody(messageEl) {
+    const clone = messageEl?.cloneNode?.(true);
+    if (!clone) return null;
+    clone.querySelectorAll?.("span.by, span.tstamp, .avatar").forEach((node) => node.remove());
+    return clone;
+  }
+
+  function extractMessageHtml(messageEl) {
+    const clone = cloneMessageBody(messageEl);
+    return String(clone?.innerHTML || "");
+  }
+
   function extractMessageText(messageEl) {
     const { normalizeMessageText, joinDescAnchorLines } = getChatJson();
-    const clone = messageEl.cloneNode(true);
-    clone.querySelectorAll?.("span.by, span.tstamp, .avatar").forEach((node) => node.remove());
+    const clone = cloneMessageBody(messageEl);
+    if (!clone) {
+      const rawFallback = messageEl?.textContent || "";
+      return normalizeMessageText
+        ? normalizeMessageText(rawFallback)
+        : String(rawFallback).replace(/\s+/g, " ").trim();
+    }
 
     if (hasDescStyle(messageEl) && typeof joinDescAnchorLines === "function") {
       const descWithLineBreaks = joinDescAnchorLines(clone.innerHTML || "", "\n");
       if (descWithLineBreaks) return descWithLineBreaks;
+    }
+
+    const { parserUtils = {} } = getSharedCore();
+    const serializeHtml =
+      typeof parserUtils.serializeInlineFormattingHtmlToMarkdown === "function"
+        ? parserUtils.serializeInlineFormattingHtmlToMarkdown
+        : null;
+    if (serializeHtml && clone.innerHTML) {
+      const serialized = serializeHtml(clone.innerHTML || "");
+      if (serialized) {
+        return normalizeMessageText
+          ? normalizeMessageText(serialized)
+          : String(serialized).replace(/\s+/g, " ").trim();
+      }
     }
 
     const raw = clone.textContent || "";
@@ -798,6 +829,7 @@
         timestamp: rawTimestamp,
         textColor: getMessageTextColor(messageEl),
         text: extractMessageText(messageEl),
+        html: extractMessageHtml(messageEl),
         imageUrl: getInlineMessageImageUrl(messageEl),
         avatarOriginalUrl: currentSrc,
         avatarResolvedUrl: resolvedAvatarUrl,
