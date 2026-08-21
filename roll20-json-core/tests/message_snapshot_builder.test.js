@@ -125,3 +125,17 @@ test("message snapshot builder serializes inline em and strong html to markdown 
     "*안녕하세요* **안녕하세요** ***안녕하세요***"
   );
 });
+
+test("message snapshot builder preserves desc message line breaks", () => {
+  const result = buildMessageSnapshots({
+    messages: [
+      {
+        hasDescStyle: true,
+        text: "첫 줄\n둘째 줄",
+        html: "<a>첫 줄</a><a>둘째 줄</a>",
+      },
+    ],
+  });
+
+  assert.equal(result.snapshots[0].text, "첫 줄\n둘째 줄");
+});
