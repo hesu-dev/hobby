@@ -245,3 +245,47 @@ test("legacy coc-attack-1 input is accepted and exported as coc-attack", () => {
   assert.deepEqual(parsed?.inputs?.rolls, [50]);
   assert.equal(parsed?.inputs?.damage, 6);
 });
+
+test("coc-attack-1 rejects an invalid rendered roll instead of substituting the target", () => {
+  const html = `
+    <div class="sheet-rolltemplate-coc-attack-1">
+      <table>
+        <caption>Knife</caption>
+        <tr>
+          <td class="sheet-template_label">기준치</td>
+          <td class="sheet-template_value">50</td>
+        </tr>
+        <tr>
+          <td class="sheet-template_label">굴림</td>
+          <td class="sheet-template_value">—</td>
+        </tr>
+        <tr>
+          <td class="sheet-template_label">피해</td>
+          <td class="sheet-template_value">6</td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  assert.equal(parseCocRulePayload({ html, template: "coc-attack-1" }), null);
+});
+
+test("coc bonus-penalty rejects an invalid threshold row instead of substituting a roll", () => {
+  const html = `
+    <div class="sheet-rolltemplate-coc-bonus-penalty">
+      <table>
+        <caption>Listen</caption>
+        <tr>
+          <td class="sheet-template_label">기준치</td>
+          <td class="sheet-template_value">—</td>
+        </tr>
+        <tr>
+          <td class="sheet-template_label">굴림</td>
+          <td class="sheet-template_value">23 / 74</td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  assert.equal(parseCocRulePayload({ html, template: "coc-bonus-penalty" }), null);
+});

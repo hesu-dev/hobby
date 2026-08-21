@@ -502,6 +502,15 @@ function mapAttackSkill(caption) {
   return safe;
 }
 
+function canonicalizeCocTemplateName(template) {
+  const normalized = String(template || "").toLowerCase();
+  const withoutTypePrefix = normalized.replace(/^type-(?=coc(?:-|$))/, "");
+  if (withoutTypePrefix === "coc-attack-bonus") {
+    return "coc-attack-bonus-penalty";
+  }
+  return withoutTypePrefix;
+}
+
 function parseCocAttackPayload(html, template) {
   const { extractCaptionText, collectTemplateRowsWithCells, extractFirstInteger, extractAllIntegers } =
     parserUtils;
@@ -541,30 +550,47 @@ function parseCocAttackOnePayload(html, template) {
   const rows = collectTemplateRowsWithCells(safeHtml);
 
   const successRow = rows.find((row) => /기준치|value/i.test(String(row.label || "")));
+  const rollRow = rows.find((row) => /굴림|rolled/i.test(String(row.label || "")));
   const damageRow = rows.find((row) => /피해|dam/i.test(String(row.label || "")));
   const target = extractFirstInteger(successRow?.value || "");
+  const roll = extractFirstInteger(rollRow?.value || "");
   const damage = extractFirstInteger(damageRow?.value || "");
 
-  if (!skill || !Number.isFinite(target) || !Number.isFinite(damage)) return null;
+  if (
+    !skill ||
+    !Number.isFinite(target) ||
+    !Number.isFinite(damage) ||
+    (rollRow && !Number.isFinite(roll))
+  ) {
+    return null;
+  }
   return {
     source: "roll20",
     rule: "coc7",
     template: "coc-attack",
-    inputs: { skill, target, rolls: [target], damage },
+    inputs: { skill, target, rolls: [rollRow ? roll : target], damage },
   };
 }
 
 function parseCocPayload(html, template) {
-  const { extractCaptionText, collectTemplateRowsWithCells, extractAllIntegers } = parserUtils;
+  const {
+    extractCaptionText,
+    collectTemplateRowsWithCells,
+    extractAllIntegers,
+    extractFirstInteger,
+  } = parserUtils;
   const normalizedTemplate = String(template || "").toLowerCase();
   const allowedTemplates = new Set(["coc", "coc-bonus-penalty"]);
   if (!allowedTemplates.has(normalizedTemplate)) return null;
   const safeHtml = String(html || "");
   const skill = extractCaptionText(safeHtml);
   const rows = collectTemplateRowsWithCells(safeHtml);
+  const successRow = rows.find((row) => /기준치|value/i.test(String(row.label || "")));
   const rollRow = rows.find((row) => /굴림|rolled/i.test(String(row.label || "")));
   const rolls = extractAllIntegers(rollRow?.value || "");
-  const target = rolls.length ? rolls[0] : null;
+  const target = successRow
+    ? extractFirstInteger(successRow.value || "")
+    : rolls[0] ?? null;
   if (!skill || !Number.isFinite(target) || !rolls.length) return null;
 
   return {
@@ -599,14 +625,16 @@ function parseCocBonusPayload(html, template) {
 }
 
 function parseCocRulePayload({ html, template }) {
-  const normalizedTemplate = String(template || "").toLowerCase();
+  const normalizedTemplate = canonicalizeCocTemplateName(template);
   if (normalizedTemplate === "coc" || normalizedTemplate === "coc-bonus-penalty") {
     return parseCocPayload(html, normalizedTemplate) || parseCoc1DicePayload(html, normalizedTemplate);
   }
   if (normalizedTemplate === "coc-1" || normalizedTemplate === "coc-default") {
     return parseCoc1DicePayload(html, normalizedTemplate);
   }
-  if (template === "coc-bonus") return parseCocBonusPayload(html, template);
+  if (normalizedTemplate === "coc-bonus") {
+    return parseCocBonusPayload(html, normalizedTemplate);
+  }
   if (normalizedTemplate === "coc-attack" || normalizedTemplate === "coc-attack-bonus-penalty") {
     return (
       parseCocAttackPayload(html, normalizedTemplate) ||

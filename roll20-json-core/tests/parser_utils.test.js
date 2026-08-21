@@ -21,6 +21,15 @@ test("extractTemplateName reads rolltemplate names", () => {
   );
 });
 
+test("extractTemplateName preserves type-prefixed rolltemplate names", () => {
+  assert.equal(
+    parserUtils.extractTemplateName(
+      '<div class="sheet-rolltemplate-type-coc-attack-1"></div>'
+    ),
+    "type-coc-attack-1"
+  );
+});
+
 test("serializeInlineFormattingHtmlToMarkdown preserves em and strong as markdown markers", () => {
   assert.equal(
     parserUtils.serializeInlineFormattingHtmlToMarkdown("<em>안녕하세요</em>"),
