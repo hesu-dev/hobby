@@ -2,11 +2,44 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const popupHtml = fs.readFileSync(path.join(__dirname, "..", "popup.html"), "utf8");
 const popupJs = fs.readFileSync(path.join(__dirname, "..", "js", "popup", "popup.js"), "utf8");
 const manifest = require("../manifest.json");
 const livePopupHtml = popupHtml.replace(/<!--[\s\S]*?-->/g, "");
+
+function loadFormatCocImportResult() {
+  const source = popupJs.replace(
+    /\ninitPopup\(\);\s*$/,
+    "\nglobalThis.__formatCocImportResult = formatCocImportResult;\n"
+  );
+  assert.notEqual(source, popupJs, "popup initialization footer must remain replaceable in the test harness");
+
+  const element = {};
+  const context = {
+    document: {
+      getElementById() {
+        return element;
+      },
+      querySelector() {
+        return element;
+      },
+      querySelectorAll() {
+        return [];
+      },
+    },
+    window: {
+      Roll20CleanerAvatarDownloadPlan: {},
+      Roll20CleanerAvatarPreview: {},
+      Roll20CleanerFilterApplyFeedback: {},
+    },
+  };
+  vm.runInNewContext(source, context);
+  return context.__formatCocImportResult;
+}
+
+const formatCocImportResult = loadFormatCocImportResult();
 
 test("popup source exposes ReadingLog, sheet, and macro tabs", () => {
   assert.match(
@@ -86,4 +119,81 @@ test("popup keeps the hidden message toggle label and helper text outside the to
 
 test("chrome manifest version is bumped to 0.8.5", () => {
   assert.equal(manifest.version, "0.8.5");
+});
+
+test("popup reports the actual target and applied avatar for an avatar-only import", () => {
+  const message = formatCocImportResult({
+    ok: true,
+    characterName: "앨리스",
+    requested: { attributes: 0, abilities: 0, avatar: 1 },
+    applied: {
+      pageAttributes: 0,
+      pageAbilities: 0,
+      domAttributes: 0,
+      pageAvatar: 1,
+    },
+  });
+
+  assert.match(message, /앨리스 적용 완료/);
+  assert.match(message, /Avatar 1\/1/);
+});
+
+test("popup reports a requested avatar that was not applied", () => {
+  const message = formatCocImportResult({
+    ok: true,
+    characterName: "앨리스",
+    requested: { attributes: 1, abilities: 0, avatar: 1 },
+    applied: {
+      pageAttributes: 1,
+      pageAbilities: 0,
+      domAttributes: 0,
+      pageAvatar: 0,
+    },
+  });
+
+  assert.match(message, /Avatar 0\/1/);
+});
+
+test("popup preserves attribute and ability wording when no avatar was requested", () => {
+  const message = formatCocImportResult({
+    ok: true,
+    characterName: "앨리스",
+    requested: { attributes: 2, abilities: 1 },
+    applied: {
+      pageAttributes: 1,
+      pageAbilities: 1,
+      domAttributes: 2,
+    },
+  });
+
+  assert.equal(message, "앨리스 적용 완료: Attributes 2/2, Abilities 1/1.");
+  assert.doesNotMatch(message, /Avatar/);
+});
+
+test("popup preserves CoC import failure details", () => {
+  assert.equal(
+    formatCocImportResult({
+      ok: false,
+      pageResult: { message: "Roll20 모델 적용 실패" },
+      domResult: { message: "DOM 적용 실패" },
+    }),
+    "CoC 적용 실패: Roll20 모델 적용 실패"
+  );
+});
+
+test("popup preserves the sheet reopen hint", () => {
+  assert.equal(
+    formatCocImportResult({
+      ok: true,
+      characterName: "앨리스",
+      requested: { attributes: 1, abilities: 0 },
+      applied: {
+        pageAttributes: 1,
+        pageAbilities: 0,
+        domAttributes: 0,
+      },
+      sheetUi: { needsReopen: true },
+    }),
+    "앨리스 적용 완료: Attributes 1/1, Abilities 0/0. 열린 시트를 닫았다 다시 열면 변경사항이 보입니다."
+  );
 });

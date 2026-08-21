@@ -141,17 +141,23 @@
   }
 
   function collectAvatarUrl(payload) {
-    return normalizeImageUrl(
-      payload.avatarUrl ??
-        payload.iconUrl ??
-        payload.imageUrl ??
-        payload.avatar ??
-        payload.characterAvatarUrl ??
-        payload.portraitUrl ??
-        payload?.data?.iconUrl ??
-        payload?.data?.avatarUrl ??
-        payload?.data?.imageUrl
-    );
+    const candidates = [
+      payload.avatarUrl,
+      payload.iconUrl,
+      payload.imageUrl,
+      payload.avatar,
+      payload.characterAvatarUrl,
+      payload.portraitUrl,
+      payload?.data?.iconUrl,
+      payload?.data?.avatarUrl,
+      payload?.data?.imageUrl,
+    ];
+
+    for (const candidate of candidates) {
+      const avatarUrl = normalizeImageUrl(candidate);
+      if (avatarUrl) return avatarUrl;
+    }
+    return "";
   }
 
   function normalizeCoc7ImportPayload(payload, options = {}) {
@@ -439,17 +445,21 @@
     const pageAbilities = pageResult?.abilities?.applied || [];
     const domAttributes = domResult?.applied || [];
     const ok = !!(pageResult?.ok || domResult?.ok);
+    const characterName =
+      stringifyValue(pageResult?.characterName).trim() || stringifyValue(payload.characterName).trim();
     return {
       ok,
-      characterName: payload.characterName,
+      characterName,
       requested: {
         attributes: payload.attributes.length,
         abilities: payload.abilities.length,
+        avatar: payload.avatarUrl ? 1 : 0,
       },
       applied: {
         pageAttributes: pageAttributes.length,
         pageAbilities: pageAbilities.length,
         domAttributes: domAttributes.length,
+        pageAvatar: pageResult?.avatar?.applied ? 1 : 0,
       },
       sheetUi: pageResult?.sheetUi || {
         liveRefreshAttempted: false,

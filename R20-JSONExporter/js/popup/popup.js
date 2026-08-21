@@ -702,16 +702,25 @@ function formatCocImportResult(response) {
 
   const requestedAttributes = Number(response?.requested?.attributes) || 0;
   const requestedAbilities = Number(response?.requested?.abilities) || 0;
+  const requestedAvatar = Number(response?.requested?.avatar) || 0;
   const pageAttributes = Number(response?.applied?.pageAttributes) || 0;
   const domAttributes = Number(response?.applied?.domAttributes) || 0;
   const pageAbilities = Number(response?.applied?.pageAbilities) || 0;
+  const pageAvatar = Number(response?.applied?.pageAvatar) || 0;
   const appliedAttributes = Math.max(pageAttributes, domAttributes);
+  const appliedCounts = [
+    `Attributes ${appliedAttributes}/${requestedAttributes}`,
+    `Abilities ${pageAbilities}/${requestedAbilities}`,
+  ];
+  if (requestedAvatar > 0) {
+    appliedCounts.push(`Avatar ${pageAvatar}/${requestedAvatar}`);
+  }
   const reopenHint = response?.sheetUi?.reopened
     ? " 열린 시트를 자동으로 다시 열었습니다."
     : response?.sheetUi?.needsReopen
     ? " 열린 시트를 닫았다 다시 열면 변경사항이 보입니다."
     : "";
-  return `${response.characterName || COC_IMPORT_FALLBACK_TARGET_LABEL} 적용 완료: Attributes ${appliedAttributes}/${requestedAttributes}, Abilities ${pageAbilities}/${requestedAbilities}.${reopenHint}`;
+  return `${response.characterName || COC_IMPORT_FALLBACK_TARGET_LABEL} 적용 완료: ${appliedCounts.join(", ")}.${reopenHint}`;
 }
 
 async function runCocImportApply() {

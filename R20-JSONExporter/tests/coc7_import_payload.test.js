@@ -83,6 +83,119 @@ test("coc7 import parser normalizes external avatar image urls", () => {
   assert.deepEqual(payload.abilities, []);
 });
 
+test("coc7 import parser falls through an empty avatarUrl to a valid iconUrl", () => {
+  const payload = importer.normalizeCoc7ImportPayload({
+    avatarUrl: "",
+    iconUrl: "https://images.example.com/icon.png",
+  });
+
+  assert.equal(payload.avatarUrl, "https://images.example.com/icon.png");
+});
+
+test("coc7 import parser falls through an invalid avatarUrl to a valid iconUrl", () => {
+  const payload = importer.normalizeCoc7ImportPayload({
+    avatarUrl: "javascript:alert(1)",
+    iconUrl: "https://images.example.com/icon.png",
+  });
+
+  assert.equal(payload.avatarUrl, "https://images.example.com/icon.png");
+});
+
+test("coc7 import parser falls through invalid top-level avatar aliases to nested data", () => {
+  const payload = importer.normalizeCoc7ImportPayload({
+    avatarUrl: "not-a-url",
+    iconUrl: "also-not-a-url",
+    imageUrl: "invalid-image-url",
+    avatar: "invalid-avatar",
+    characterAvatarUrl: "invalid-character-avatar",
+    portraitUrl: "invalid-portrait",
+    data: {
+      avatarUrl: "https://images.example.com/nested-avatar.png",
+    },
+  });
+
+  assert.equal(payload.avatarUrl, "https://images.example.com/nested-avatar.png");
+});
+
+test("coc7 import summary reports the actual page target and avatar counts", async () => {
+  const originalGlobals = {
+    chrome: global.chrome,
+    CustomEvent: global.CustomEvent,
+    document: global.document,
+    window: global.window,
+  };
+
+  class TestCustomEvent extends Event {
+    constructor(type, options = {}) {
+      super(type);
+      this.detail = options.detail;
+    }
+  }
+
+  const pageResult = {
+    ok: true,
+    characterName: "앨리스",
+    attributes: { applied: [] },
+    abilities: { applied: [] },
+    avatar: {
+      applied: true,
+      url: "https://images.example.com/alice.png",
+    },
+  };
+  const pageWindow = new EventTarget();
+  pageWindow.__r20jeCoc7PageImporterReady = true;
+  pageWindow.addEventListener("R20JE_COC7_IMPORT_REQUEST", (event) => {
+    pageWindow.dispatchEvent(
+      new TestCustomEvent("R20JE_COC7_IMPORT_RESPONSE", {
+        detail: {
+          requestId: event.detail.requestId,
+          result: pageResult,
+        },
+      })
+    );
+  });
+
+  try {
+    global.chrome = { runtime: { getURL() {} } };
+    global.CustomEvent = TestCustomEvent;
+    global.document = {
+      activeElement: null,
+      querySelectorAll() {
+        return [];
+      },
+    };
+    global.window = pageWindow;
+
+    const result = await importer.applyCoc7ImportText(`
+{
+  "character": "로즈",
+  "avatarUrl": "https://images.example.com/alice.png"
+}
+`);
+
+    assert.deepEqual(
+      {
+        characterName: result.characterName,
+        requestedAvatar: result.requested.avatar,
+        appliedPageAvatar: result.applied.pageAvatar,
+      },
+      {
+        characterName: "앨리스",
+        requestedAvatar: 1,
+        appliedPageAvatar: 1,
+      }
+    );
+  } finally {
+    Object.entries(originalGlobals).forEach(([name, value]) => {
+      if (value === undefined) {
+        delete global[name];
+      } else {
+        global[name] = value;
+      }
+    });
+  }
+});
+
 test("open sheet DOM import applies attributes to the active sheet before a name match", () => {
   const originalGlobals = {
     document: global.document,
