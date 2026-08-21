@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "리딩로그: 파일 가져오기",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Safiri 확장을 통해, Roll20 채팅 로그를 리딩로그로 복사합니다.",
   "action": {
     "default_popup": "popup.html"

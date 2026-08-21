@@ -2,16 +2,16 @@
 
 ## Package inputs
 
-- Unsigned release package: `/Users/he-su/Desktop/chrome_extension/R20-JSONExporter/release/firefox-mobile.zip`
+- Unsigned release package: `release/firefox-mobile.zip`
 - Fixed release ID: `r20-json-exporter-firefox@reha.dev`
-- Current release version: `0.8.4`
+- Current release version: `0.8.5`
 
 ## Sign for self-distribution
 
 1. Build the current release artifacts.
-   - Run `./deploy.sh` from `/Users/he-su/Desktop/chrome_extension/R20-JSONExporter`
+   - Run `./deploy.sh` from the `R20-JSONExporter/` project directory.
 2. Verify the Firefox release package exists.
-   - `/Users/he-su/Desktop/chrome_extension/R20-JSONExporter/release/firefox-mobile.zip`
+   - `release/firefox-mobile.zip`
 3. Submit the package to AMO as `On your own` or sign it with `web-ext sign --channel=unlisted`.
 4. Keep the add-on ID fixed as `r20-json-exporter-firefox@reha.dev`.
 5. Download the signed `.xpi` from AMO.
@@ -47,4 +47,4 @@
 - Direct download works even if the avatar editor was never opened.
 - Direct download stores the redirected avatar URL directly in `input.speakerImages.avatar.url`.
 - Edited avatar mappings override the redirected URL in the exported JSON.
-- The installed add-on version shown in Firefox is `0.8.4`.
+- The installed add-on version shown in Firefox is `0.8.5`.

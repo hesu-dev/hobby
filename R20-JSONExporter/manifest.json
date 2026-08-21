@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "R20-JSONExporter",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Export a Roll20 chat to a JSON file.",
   "icons": {
     "16": "icons/icon16.png",

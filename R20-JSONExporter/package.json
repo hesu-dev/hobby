@@ -1,6 +1,6 @@
 {
   "name": "roll20-clener-extension",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "description": "Build tooling for Roll20 cleaner Chrome extension",
   "scripts": {

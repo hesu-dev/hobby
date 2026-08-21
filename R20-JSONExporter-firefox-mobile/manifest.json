@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "R20-JSONExporter Mobile",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Export a Roll20 chat to JSON on Android.",
   "browser_action": {
     "default_title": "R20-JSONExporter"

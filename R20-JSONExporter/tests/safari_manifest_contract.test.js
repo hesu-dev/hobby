@@ -16,10 +16,21 @@ const manifestPath = path.join(
 );
 const safariResourcesRoot = path.dirname(manifestPath);
 
-test("safari source manifest declares popup messaging and native save permissions", () => {
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
 
-  assert.equal(manifest.version, "0.8.4");
+function readShortVersion(filePath) {
+  const content = fs.readFileSync(filePath, "utf8");
+  return content.match(
+    /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/
+  )?.[1];
+}
+
+test("safari source manifest declares popup messaging and native save permissions", () => {
+  const manifest = readJson(manifestPath);
+
+  assert.equal(manifest.version, "0.8.5");
   assert.equal(manifest.name, "리딩로그: 파일 가져오기");
   assert.equal(
     manifest.description,
@@ -50,5 +61,27 @@ test("safari source manifest declares popup messaging and native save permission
   assert.equal(
     fs.readFileSync(path.join(safariResourcesRoot, "js", "vendor", "roll20-json-core.js"), "utf8"),
     `${buildSharedCoreBundle()}\n`
+  );
+});
+
+test("release version metadata stays synchronized at 0.8.5", () => {
+  const projectRoot = path.join(__dirname, "..");
+  const repoRoot = path.join(projectRoot, "..");
+  const expectedVersion = "0.8.5";
+
+  assert.equal(readJson(path.join(projectRoot, "package.json")).version, expectedVersion);
+  assert.equal(readJson(path.join(projectRoot, "manifest.json")).version, expectedVersion);
+  assert.equal(
+    readJson(path.join(repoRoot, "R20-JSONExporter-firefox-mobile", "manifest.json")).version,
+    expectedVersion
+  );
+  assert.equal(readJson(manifestPath).version, expectedVersion);
+  assert.equal(
+    readShortVersion(path.join(safariResourcesRoot, "..", "Info.plist")),
+    expectedVersion
+  );
+  assert.equal(
+    readShortVersion(path.join(safariResourcesRoot, "..", "..", "Runner", "Info.plist")),
+    expectedVersion
   );
 });
