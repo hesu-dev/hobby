@@ -5,7 +5,7 @@ Firefox for Android target for Roll20 chat JSON export.
 ## Source and Release
 
 - Source lives in this folder.
-- Release artifacts are staged into `/Users/he-su/Desktop/chrome_extension/.worktrees/codex-shared-core-firefox-mobile/R20-JSONExporter/release/firefox-mobile`.
+- Release artifacts are staged into `R20-JSONExporter/release/firefox-mobile` from the repository root.
 - Shared parsing logic comes from the sibling `roll20-json-core` package and is bundled into the staged release as `js/vendor/roll20-json-core.js`.
 
 ## Runtime Flow
