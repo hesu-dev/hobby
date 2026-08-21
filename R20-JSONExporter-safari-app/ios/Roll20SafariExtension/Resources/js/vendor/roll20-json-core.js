@@ -1454,6 +1454,7 @@ function inferRuleTypeFromDiceRule(rule = "") {
 }
 
 function resolveSnapshotText(message) {
+  if (message?.hasDescStyle) return String(message?.text || "");
   const rawHtml = String(message?.html || "");
   if (
     rawHtml &&
