@@ -134,6 +134,26 @@
     return [...byName.values()];
   }
 
+  function normalizeImageUrl(value) {
+    const url = stringifyValue(value).trim();
+    if (!url) return "";
+    return /^(https?:\/\/|data:image\/)/i.test(url) ? url : "";
+  }
+
+  function collectAvatarUrl(payload) {
+    return normalizeImageUrl(
+      payload.avatarUrl ??
+        payload.iconUrl ??
+        payload.imageUrl ??
+        payload.avatar ??
+        payload.characterAvatarUrl ??
+        payload.portraitUrl ??
+        payload?.data?.iconUrl ??
+        payload?.data?.avatarUrl ??
+        payload?.data?.imageUrl
+    );
+  }
+
   function normalizeCoc7ImportPayload(payload, options = {}) {
     if (!isPlainObject(payload)) {
       throw new Error("CoC import payload must be a JSON object.");
@@ -145,14 +165,16 @@
 
     const attributes = collectAttributeEntries(payload);
     const abilities = collectAbilityEntries(payload);
-    if (!attributes.length && !abilities.length) {
-      throw new Error("적용할 attributes 또는 abilities가 없습니다.");
+    const avatarUrl = collectAvatarUrl(payload);
+    if (!attributes.length && !abilities.length && !avatarUrl) {
+      throw new Error("적용할 attributes, abilities 또는 avatarUrl이 없습니다.");
     }
 
     return {
       schema: "R20JE_COC7_IMPORT",
       version: 1,
       characterName,
+      avatarUrl,
       attributes,
       abilities,
     };

@@ -453,6 +453,33 @@
     return result;
   }
 
+  function normalizeImageUrl(value) {
+    const url = String(value || "").trim();
+    if (!url) return "";
+    return /^(https?:\/\/|data:image\/)/i.test(url) ? url : "";
+  }
+
+  function applyAvatar(character, avatarUrl) {
+    const url = normalizeImageUrl(avatarUrl);
+    const result = {
+      applied: false,
+      url,
+      failed: [],
+    };
+    if (!url) return result;
+
+    try {
+      saveModel(character, { avatar: url });
+      result.applied = true;
+    } catch (error) {
+      result.failed.push({
+        name: "avatar",
+        reason: error?.message || String(error),
+      });
+    }
+    return result;
+  }
+
   function getOpenCharacterDialogs(characterName) {
     if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") return [];
     const selectors = [
@@ -634,7 +661,8 @@
     const abilityCollection = getAbilityCollection(character, characterId);
     const attributes = applyAttributes(attributeCollection, payload.attributes || [], characterId);
     const abilities = applyAbilities(abilityCollection, payload.abilities || [], characterId);
-    const ok = attributes.applied.length > 0 || abilities.applied.length > 0;
+    const avatar = applyAvatar(character, payload.avatarUrl);
+    const ok = attributes.applied.length > 0 || abilities.applied.length > 0 || avatar.applied;
     const sheetUi = await getSheetUiState({
       ok,
       character,
@@ -650,6 +678,7 @@
       characterId,
       attributes,
       abilities,
+      avatar,
       sheetUi,
       message: ok ? "Roll20 캐릭터 모델에 적용했습니다." : "캐릭터는 찾았지만 적용할 수 있는 collection을 찾지 못했습니다.",
     };

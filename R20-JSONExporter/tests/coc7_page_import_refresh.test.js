@@ -319,3 +319,54 @@ test("page import falls back to payload name when only a journal character node 
   assert.equal(response.targetStrategy, "payload-name");
   assert.equal(campaign.abilities.models[0].attributes.characterid, "-rose");
 });
+
+test("page import saves an external avatar url on the target character", async () => {
+  const activeElement = {};
+  const activeDialog = {
+    textContent: "앨리스",
+    dataset: { characterid: "-alice" },
+    style: { zIndex: "200" },
+    contains(node) {
+      return node === activeElement;
+    },
+    getAttribute(name) {
+      if (name === "data-characterid") return "-alice";
+      return "";
+    },
+    querySelector(selector) {
+      if (selector.includes("attr_character_name")) {
+        return { value: "앨리스", textContent: "" };
+      }
+      return null;
+    },
+  };
+
+  const { window, campaign } = runPageImporter({
+    document: {
+      activeElement,
+      querySelectorAll(selector) {
+        if (selector.includes(".ui-dialog")) return [activeDialog];
+        return [];
+      },
+    },
+  });
+  const alice = createModel({
+    id: "-alice",
+    name: "앨리스",
+    avatar: "",
+  });
+  campaign.characters.models.push(alice);
+
+  const response = await dispatchImport(window, {
+    characterName: "로즈",
+    avatarUrl: "https://images.example.com/alice.png",
+    attributes: [],
+    abilities: [],
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.characterId, "-alice");
+  assert.equal(response.avatar.applied, true);
+  assert.equal(response.avatar.url, "https://images.example.com/alice.png");
+  assert.equal(alice.attributes.avatar, "https://images.example.com/alice.png");
+});

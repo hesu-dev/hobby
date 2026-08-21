@@ -69,6 +69,20 @@ test("coc7 import parser allows missing character names for active sheet targeti
   ]);
 });
 
+test("coc7 import parser normalizes external avatar image urls", () => {
+  const payload = importer.parseCoc7ImportText(`
+{
+  "character": "로즈",
+  "iconUrl": " https://images.example.com/rose.png "
+}
+`);
+
+  assert.equal(payload.characterName, "로즈");
+  assert.equal(payload.avatarUrl, "https://images.example.com/rose.png");
+  assert.deepEqual(payload.attributes, []);
+  assert.deepEqual(payload.abilities, []);
+});
+
 test("open sheet DOM import applies attributes to the active sheet before a name match", () => {
   const originalGlobals = {
     document: global.document,
