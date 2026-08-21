@@ -8,19 +8,15 @@ const popupJs = fs.readFileSync(path.join(__dirname, "..", "js", "popup", "popup
 const manifest = require("../manifest.json");
 const livePopupHtml = popupHtml.replace(/<!--[\s\S]*?-->/g, "");
 
-test("popup exposes ReadingLog and sheet tabs while the macro tab is disabled", () => {
+test("popup source exposes ReadingLog, sheet, and macro tabs", () => {
   assert.match(
     livePopupHtml,
-    /<nav class="tabs" role="tablist" aria-label="popup sections">[\s\S]*?<button[\s\S]*?id="readingLogTab"[\s\S]*?>\s*리딩로그\s*<\/button>[\s\S]*?<button[\s\S]*?id="sheetTab"[\s\S]*?>\s*r20시트\s*<\/button>[\s\S]*?<\/nav>/
+    /<nav class="tabs" role="tablist" aria-label="popup sections">[\s\S]*?<button[\s\S]*?id="readingLogTab"[\s\S]*?>\s*리딩로그\s*<\/button>[\s\S]*?<button[\s\S]*?id="sheetTab"[\s\S]*?>\s*r20시트\s*<\/button>[\s\S]*?<button[\s\S]*?id="macroTab"[\s\S]*?>\s*매크로\s*<\/button>[\s\S]*?<\/nav>/
   );
   assert.match(
     livePopupHtml,
-    /<section id="readingLogTabPanel"[\s\S]*?<section id="sheetTabPanel"[\s\S]*?<div id="feedbackPanel"/
+    /<section id="readingLogTabPanel"[\s\S]*?<section id="sheetTabPanel"[\s\S]*?<section id="macroTabPanel"[\s\S]*?<div id="feedbackPanel"/
   );
-  assert.doesNotMatch(livePopupHtml, /id="macroTab"/);
-  assert.doesNotMatch(livePopupHtml, /id="macroTabPanel"/);
-  assert.match(popupHtml, /<!--[\s\S]*id="macroTab"[\s\S]*-->/);
-  assert.match(popupHtml, /<!--[\s\S]*id="macroTabPanel"[\s\S]*-->/);
   assert.match(popupJs, /querySelectorAll\("\[role=\\"tab\\"\]"\)/);
 });
 
@@ -61,12 +57,10 @@ test("popup exposes the CoC import paste box in the sheet tab", () => {
   assert.doesNotMatch(popupJs, /로즈 테스트용 CoC import 샘플을 입력했습니다\./);
 });
 
-test("popup keeps the macro import tab commented out until the feature is re-enabled", () => {
-  assert.doesNotMatch(livePopupHtml, /macroImportPanel/);
-  assert.doesNotMatch(livePopupHtml, /macroImportPayload/);
-  assert.doesNotMatch(livePopupHtml, /applyMacroImport/);
-  assert.match(popupHtml, /<!--[\s\S]*macroImportPanel[\s\S]*-->/);
-  assert.match(popupHtml, /<!--[\s\S]*applyMacroImport[\s\S]*-->/);
+test("popup source enables the macro import panel for post-release development", () => {
+  assert.match(livePopupHtml, /id="macroImportPanel"/);
+  assert.match(livePopupHtml, /id="macroImportPayload"/);
+  assert.match(livePopupHtml, /id="applyMacroImport"/);
 });
 
 test("popup keeps shared feedback visible", () => {
