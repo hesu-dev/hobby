@@ -10,6 +10,7 @@ test("source submission readme documents the exact build inputs and commands", (
   const readme = fs.readFileSync(SOURCE_SUBMISSION_README_TEMPLATE_PATH, "utf8");
 
   assert.match(readme, /R20-JSONExporter-firefox-mobile/);
+  assert.match(readme, /R20-JSONExporter-safari-app/);
   assert.match(readme, /roll20-json-core/);
   assert.match(readme, /npm run build/);
   assert.match(readme, /npm run zip/);

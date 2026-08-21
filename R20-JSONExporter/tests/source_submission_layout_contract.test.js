@@ -15,6 +15,7 @@ test("source submission bundle targets the firefox source set", () => {
   assert.deepEqual(SOURCE_SUBMISSION_ITEMS, [
     "R20-JSONExporter",
     "R20-JSONExporter-firefox-mobile",
+    "R20-JSONExporter-safari-app",
     "roll20-json-core",
   ]);
   assert.equal(
@@ -39,6 +40,17 @@ test("source submission stage keeps the firefox mobile manifest at the zip root"
   assert.equal(
     fs.existsSync(
       path.join(SOURCE_SUBMISSION_STAGE_ROOT, "supporting-sources", "R20-JSONExporter", "package.json")
+    ),
+    true
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        SOURCE_SUBMISSION_STAGE_ROOT,
+        "supporting-sources",
+        "R20-JSONExporter-safari-app",
+        "app.json"
+      )
     ),
     true
   );

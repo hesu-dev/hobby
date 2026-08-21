@@ -18,7 +18,7 @@ Because of that generated output, AMO requires a readable source archive with bu
 
 ## How to Generate It
 
-From `/Users/he-su/Desktop/chrome_extension/R20-JSONExporter`, run:
+From the `R20-JSONExporter/` project directory, run:
 
 ```bash
 npm run source:zip
@@ -31,6 +31,7 @@ This command:
 3. Adds the AMO reviewer guide as `AMO-README.md`
 4. Copies the additional required source folders under `supporting-sources/`:
    - `R20-JSONExporter`
+   - `R20-JSONExporter-safari-app`
    - `roll20-json-core`
 5. Excludes generated `release/` folders, `node_modules`, `.git`, `.DS_Store`, and existing `.zip` files
 6. Creates `release/firefox-mobile-source.zip`

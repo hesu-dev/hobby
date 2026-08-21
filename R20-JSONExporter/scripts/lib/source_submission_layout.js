@@ -16,6 +16,7 @@ const SOURCE_SUBMISSION_README_TEMPLATE_PATH = path.join(
 const SOURCE_SUBMISSION_ITEMS = [
   "R20-JSONExporter",
   "R20-JSONExporter-firefox-mobile",
+  "R20-JSONExporter-safari-app",
   "roll20-json-core",
 ];
 
